@@ -8,6 +8,10 @@ export default function CadastroUsuario({ setToken }: { setToken: (token: string
     const [senha, setSenha] = useState("");
 
     const handleCadastro = async () => {
+        if (!login || !email || !senha) {
+            return alert("Preencha todos os campos");
+        }
+
         const response = await fetch("http://127.0.0.1:8000/usuario/cadastro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -15,12 +19,12 @@ export default function CadastroUsuario({ setToken }: { setToken: (token: string
         });
 
         const data = await response.json();
-        if (data.access_token) {
+        if (response.ok && data.access_token) {
         localStorage.setItem("token", data.access_token);
         setToken(data.access_token);
         navigate('/dashboard'); // Redireciona para o dashboard após cadastro
         } else {
-        alert("Erro: " + (data.erro || "Falha no cadastro"));
+        alert("Erro: " + (data.detail || data.erro || "Falha no cadastro"));
         }  
     };
 

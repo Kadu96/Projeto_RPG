@@ -18,7 +18,7 @@ export default function Dashboard() {
         buscarPersonagens();
         }, []); // O array vazio [] garante que isso só rode UMA vez ao carregar a página  
     const handleNovoChar = () => {
-        navigate('/criar-personagem');
+        navigate('/criar');
     };
     return (
         <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto', color: '#eee', backgroundColor: '#222', borderRadius: '8px' }}>
