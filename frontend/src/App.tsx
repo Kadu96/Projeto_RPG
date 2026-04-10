@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Login from './paginas/Login';
 import Dashboard from './paginas/Dashboard';
 import CriarPersonagem from './paginas/CriarPersonagem';
+import CadastroUsuario from './paginas/CadastroUsuario';
 
 function App() {
   // Estado simples de autenticação (depois moveremos para algo mais robusto)
@@ -16,6 +17,7 @@ function App() {
         {/* Rotas Protegidas */}
         <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/" />} />
         <Route path="/criar" element={token ? <CriarPersonagem /> : <Navigate to="/" />} />
+        <Route path="/cadastro-usuario" element={<CadastroUsuario setToken={setToken} />} />
       </Routes>
     </Router>
   );
