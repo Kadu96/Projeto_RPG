@@ -82,25 +82,25 @@ export default function CriarPersonagem() {
     };
 
     const handleSalvar = async () => {
-    const token = localStorage.getItem("token");
-    
-    try {
-      const response = await fetch("http://127.0.0.1:8000/save-character", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // Enviamos o "crachá" de login
-        },
-        body: JSON.stringify(ficha),
-      });
+      const token = localStorage.getItem("token");
+      
+      try {
+        const response = await fetch("http://127.0.0.1:8000/personagem/salvar", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}` // Enviamos o "crachá" de login
+          },
+          body: JSON.stringify(ficha),
+        });
 
-      if (response.ok) {
-        alert("Personagem criado com sucesso!");
-        navigate("/dashboard");
+        if (response.ok) {
+          alert("Personagem criado com sucesso!");
+          navigate("/dashboard");
+        }
+      } catch (error) {
+        console.error("Erro ao salvar:", error);
       }
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
-    }
   };
 
   return (
