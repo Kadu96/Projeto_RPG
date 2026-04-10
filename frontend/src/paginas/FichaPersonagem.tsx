@@ -36,9 +36,10 @@ export default function FichaPersonagem() {
 
         const data = await response.json();
         setPersonagem(data);
-      } catch (error: any) {
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao carregar a ficha';
         console.error('Erro ao carregar ficha:', error);
-        setErro(error.message || 'Falha ao carregar a ficha');
+        setErro(message);
       }
     };
 
