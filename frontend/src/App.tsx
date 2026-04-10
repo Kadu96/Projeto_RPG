@@ -1,120 +1,147 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+
+// Definimos o formato dos nossos atributos
+interface Attributes {
+  forca: number;
+  destreza: number;
+  constituicao: number;
+  inteligencia: number;
+  sabedoria:number;
+  carisma:number;
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Estado para os atributos
+  const [attributes, setAttributes] = useState<Attributes>({
+    forca: 10,
+    destreza: 10,
+    constituicao: 10,
+    inteligencia: 10,
+    sabedoria: 10,
+    carisma: 10
+  });  
+  const [charName, setCharName] = useState<string>("Novo Viajante");
+
+  // Função para aumentar um atributo
+  const handleIncrease = (attr: keyof Attributes) => {
+    setAttributes(prev => ({
+      ...prev,
+      [attr]: prev[attr] + 1
+    }));
+  };
+
+  // Função para diminuir um atributo
+  const handleDecrease = (attr: keyof Attributes) => {
+    setAttributes(prev => ({
+      ...prev,
+      [attr]: prev[attr] - 1
+    }));
+  };
+  // Função para simular o salvamento da ficha
+  const handleSave = async () => {
+    // Criamos o objeto que representa a ficha completa
+    const characterData = {
+      name: charName,
+      attributes: attributes,
+      level: 1, // Nível inicial
+    };
+
+    try {
+      const response = await fetch('http://localhost:8000/save-character', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(characterData)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Ficha salva com sucesso! Servidor respondeu: ${result.data_received}`);
+      } else {
+        alert('Erro ao salvar a ficha. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar dados para o backend:', error);
+      alert('Erro ao salvar a ficha. Tente novamente.');
+    }
+
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', color: '#333' }}>
+      <h1>Ficha de Personagem (Classless)</h1>
+      <hr />
 
-      <div className="ticks"></div>
+      <div style={{marginTop: '10px'}}>
+              <h2>Identidade e Legado</h2>
+              <div>
+        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+          Nome do Personagem:
+        </label>
+        <input 
+          type="text" 
+          value={charName} 
+          onChange={(e) => setCharName(e.target.value)}
+          style={{
+            padding: '8px',
+            fontSize: '1rem',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+            width: '100%',
+            maxWidth: '300px'
+          }}
+        />
+        <p>Explorando como: <em>{charName}</em></p>
+      </div>
+        <p><strong>Nome:</strong> [Digite o nome do personagem]</p>
+        <p><strong>Raça:</strong> [Digite a raça do personagem]</p>
+        <p><strong>Idade:</strong> [Digite a idade do personagem]</p>
+        <p><strong>Sexo:</strong> [Digite o sexo do personagem]</p>
+        <p><strong>Origem:</strong> [Digite a origem do personagem]</p>
+      </div>
+      <hr />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <div style={{ marginTop: '20px' }}>
+        <h2>Atributos</h2>
+        {Object.entries(attributes).map(([key, value]) => (
+          <div key={key} style={{ marginBottom: '10px', fontSize: '1.2rem' }}>
+            <span style={{ textTransform: 'capitalize', fontWeight: 'bold' }}>
+              {key}
+            </span>
+            <button style={{margin:"0 2px", fontSize: '0.6rem'}} onClick={() => handleIncrease(key as keyof Attributes)}>
+              +
+            </button>
+            <button style={{margin:"0 2px", fontSize: '0.6rem'}} onClick={() => handleDecrease(key as keyof Attributes)}>
+              -
+            </button> <br /> 
+            <span style={{ margin: '0 10px' }}>{value}</span>
+          </div>
+        ))}
+      </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <div style={{ marginTop: '30px', padding: '15px', background: '#f4f4f4', borderRadius: '8px' }}>
+        <h3>Resumo de Combate</h3>
+        <p><strong>Bônus de Iniciativa:</strong> {Math.floor((attributes.destreza - 10) / 2)}</p>
+        <p><strong>Pontos de Vida Sugeridos:</strong> {10 + Math.floor((attributes.constituicao - 10) / 2)}</p>
+      </div>
+
+      <button 
+        onClick={handleSave}
+        style={{
+          marginTop: '30px',
+          padding: '12px 24px',
+          backgroundColor: '#2e7d32',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '1rem',
+          fontWeight: 'bold'
+        }}
+      >
+        Salvar Ficha no Banco
+      </button>
+    </div>
   )
 }
 
