@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+
 type CharacterForm = {
     nome_personagem: string;
     sexo_personagem: string;

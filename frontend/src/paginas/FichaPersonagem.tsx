@@ -19,7 +19,7 @@ type PersonagemDetalhe = {
   nivel_personagem?: number;
   pontos_experiencia?: number;
   pontos_merito?: number;
-  patente?: string;
+  rank?: string;
   algibeira?: {
     ouro?: number;
     prata?: number;
@@ -100,22 +100,26 @@ type PersonagemDetalhe = {
       };
     };
   };
-  info_combate?: Record<string, unknown>;
+  info_combate?: {
+    ca?: number;
+    iniciativa?: number;
+    deslocamento?: number;
+  };
   reservas?: {
     vida?: {
       atual?: number;
       maximo?: number;
-      dado?: string;
+      dado?: number;
     };
     mana?: {
       atual?: number;
       maximo?: number;
-      dado?: string;
+      dado?: number;
     };
     vigor?: {
       atual?: number;
       maximo?: number;
-      dado?: string;
+      dado?: number;
     };
   };
 };
@@ -131,68 +135,7 @@ export default function FichaPersonagem() {
   const [mana, setMana] = useState<string>("0");
   const [vigor, setVigor] = useState<string>("0");
 
-  // 1. Cálculo em tempo real para a interface
-  const vidaAtual = personagem?.reservas?.vida?.atual ?? 0;
-  const vidaCalculada = vidaAtual - (parseInt(dano) || 0);
-  const vidaFinal = vidaCalculada < 0 ? 0 : vidaCalculada;
-  const manaAtual = personagem?.reservas?.mana?.atual ?? 0;
-  const manaCalculada = manaAtual - (parseInt(mana) || 0);
-  const manaFinal = manaCalculada < 0 ? 0 : manaCalculada;
-  const vigorAtual = personagem?.reservas?.vigor?.atual ?? 0;
-  const vigorCalculado = vigorAtual - (parseInt(vigor) || 0);
-  const vigorFinal = vigorCalculado < 0 ? 0 : vigorCalculado;
-
-  // 2. Modificador de Atributo
-  const calcularModificador = (atributo?: number) => {
-    if (atributo === undefined) return 0;
-    return Math.floor((atributo - 10) / 2);
-  };
-
-  // 3. Atualização das reservas no backend
-  const atualizarReservas = async () => {
-    if (parseInt(dano) <= 0) return; // Não faz nada se o dano for zero ou negativo
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/personagem/atualizar/${personagem?.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            ...personagem,
-            reservas: {
-              ...personagem?.reservas,
-              vida: { ...personagem?.reservas?.vida, atual: vidaFinal },
-              ...personagem?.reservas,
-              mana: { ...personagem?.reservas?.mana, atual: manaFinal },
-              ...personagem?.reservas,
-              vigor: { ...personagem?.reservas?.vigor, atual: vigorFinal },
-            },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || "Erro ao atualizar personagem");
-      }
-
-      const data = await response.json();
-      setPersonagem(data);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Falha ao aplicar dano";
-      console.error("Erro ao aplicar dano:", error);
-      setErro(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 4. Carregamento dos dados do personagem
+  // Carregamento dos dados do personagem
   useEffect(() => {
     const fetchPersonagem = async () => {
       try {
@@ -222,6 +165,78 @@ export default function FichaPersonagem() {
       fetchPersonagem();
     }
   }, [id]);
+
+  // Modificador de Atributo
+  const calcularModificador = (atributo?: number) => {
+    if (atributo === undefined) return 0;
+    return Math.floor((atributo - 10) / 2);
+  };
+
+  // Atualização das reservas no backend
+  const atualizarReservas = async () => {
+    if (!personagem?.id) {
+      setErro("Personagem não carregado para atualização.");
+      return;
+    }
+
+    const novaVida = (personagem.reservas?.vida?.atual || 0) - Number(dano);
+    const novaMana = (personagem.reservas?.mana?.atual || 0) - Number(mana);
+    const novoVigor = (personagem.reservas?.vigor?.atual || 0) - Number(vigor);
+
+    // Garanta que os valores finais sejam números inteiros
+    const payload = {
+      ...personagem,
+      reservas: {
+        ...personagem.reservas,
+        vida: {
+          ...personagem.reservas?.vida,
+          atual: novaVida >= 0 ? novaVida : 0,
+        },
+        mana: {
+          ...personagem.reservas?.mana,
+          atual: novaMana >= 0 ? novaMana : 0,
+        },
+        vigor: {
+          ...personagem.reservas?.vigor,
+          atual: novoVigor >= 0 ? novoVigor : 0,
+        },
+      },
+    };
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/personagem/atualizar/${personagem.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || "Erro ao atualizar personagem");
+      }
+
+      const data = await response.json();
+      setPersonagem(data);
+      setDano("0");
+      setMana("0");
+      setVigor("0");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao aplicar dano";
+      console.error("Erro ao aplicar dano:", error);
+      setErro(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="ficha-container">   {/*Container G1*/}
@@ -297,7 +312,7 @@ export default function FichaPersonagem() {
           <div about="rank_Militar" style={{ display: "flex", marginTop: "20px", gap: "10px", alignItems: "center" }}>
             <strong className="info-label" style={{ minWidth: "100px" }}>Rank Militar</strong>
             <label className="info_value">
-              {personagem?.patente?.toString() || "Não informado"}
+              {personagem?.rank?.toString() || "Não informado"}
             </label>
             <input type="checkbox" onClick={() => setMostrar(!mostrar)} />
             {mostrar && (
@@ -393,15 +408,15 @@ export default function FichaPersonagem() {
         <div about="Reservas" className="info-section">  {/*Seção G3*/}
           <h2>Reservas</h2>
           <div className="atributos-grid">
-            <Reservas label="Vida" atual={vidaFinal} maximo={personagem?.reservas?.vida?.maximo} />
-            <Reservas label="Mana" atual={manaFinal} maximo={personagem?.reservas?.mana?.maximo} />
-            <Reservas label="Vigor" atual={vigorFinal} maximo={personagem?.reservas?.vigor?.maximo} />
+            <Reservas label="Vida" atual={personagem?.reservas?.vida?.atual} maximo={personagem?.reservas?.vida?.maximo} />
+            <Reservas label="Mana" atual={personagem?.reservas?.mana?.atual} maximo={personagem?.reservas?.mana?.maximo} />
+            <Reservas label="Vigor" atual={personagem?.reservas?.vigor?.atual} maximo={personagem?.reservas?.vigor?.maximo} />
           </div>
           <div about="gastoReservas" style={{display: 'flex', alignItems: 'center', marginTop: '20px'}}>
             <strong className="info-label" style={{minWidth: '100px'}}>Controle de Reservas</strong>
-            <input type="number" className="info-value" placeholder="Dano" value={dano} onBlur={() => atualizarReservas()} onChange={(e) => setDano(e.target.value)} />
-            <input type="number" className="info-value" placeholder="Mana" value={mana} onBlur={() => atualizarReservas()} onChange={(e) => setMana(e.target.value)} />
-            <input type="number" className="info-value" placeholder="Vigor" value={vigor} onBlur={() => atualizarReservas()} onChange={(e) => setVigor(e.target.value)} />
+            <input type="number" className="info-value" placeholder="Dano" value={dano} disabled={!personagem} onBlur={() => atualizarReservas()} onChange={(e) => setDano(e.target.value)} onFocus={(e) => e.target.select()} />
+            <input type="number" className="info-value" placeholder="Mana" value={mana} disabled={!personagem} onBlur={() => atualizarReservas()} onChange={(e) => setMana(e.target.value)} onFocus={(e) => e.target.select()} />
+            <input type="number" className="info-value" placeholder="Vigor" value={vigor} disabled={!personagem} onBlur={() => atualizarReservas()} onChange={(e) => setVigor(e.target.value)} onFocus={(e) => e.target.select()} />
           </div>
         </div>
         <div about="Pericias" className="pericias-container"> {/*Seção G3*/}
