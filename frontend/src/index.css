@@ -1,0 +1,53 @@
+@tailwind base;       /* Reseta margens, paddings e estilos padrão do navegador */
+@tailwind components; /* Permite criar classes reutilizáveis (opcional) */
+@tailwind utilities;  /* Injeta as milhares de classes como 'flex', 'p-4', etc. */
+
+/* Aqui você coloca o que for REALMENTE global e que o Tailwind não cobre */
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-200 font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4 {
+    /* Define que todos os títulos serão brancos e terão o roxo como destaque se necessário */
+    @apply text-white font-black tracking-tighter;
+  }
+  /* Estilização da scrollbar para ficar com cara de RPG */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded-full hover:bg-violet-700 transition-colors;
+  }
+  /* Remove as setas no Chrome, Safari, Edge e Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  /* Remove as setas no Firefox */
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
+
+@layer components {
+  /* Exemplo: Criando um estilo de botão 'RPG' que você usará em várias telas */
+  .btn-rpg {
+    @apply px-4 py-2 bg-violet-700 rounded-md font-bold uppercase 
+           hover:bg-violet-600 transition-colors border-b-4 border-violet-900 
+           active:border-b-0 active:translate-y-1;
+  }
+  
+  .titulo-pagina {
+    @apply text-4xl font-black uppercase tracking-tighter text-white;
+  }
+  
+  .subtitulo-rpg {
+    @apply text-xs font-bold uppercase text-violet-500 tracking-widest;
+  }
+}

@@ -1,0 +1,157 @@
+from sqlalchemy.orm import Session
+import models
+import uuid
+
+def calcular_ficha_inicial(db: Session, char_in, user_id: int):
+    # Busca Raça e Antecedente (usando os IDs do seu novo banco)
+    raca = db.query(models.Race).filter(models.Race.race_id == char_in.race_id).first()
+    antecedente = db.query(models.Background).filter(models.Background.background_id == char_in.background_id).first()
+
+    # --- Lógica de Cálculos (Mapeamento, Atributos, Moedas) ---
+    mapeamento = {"FOR": "forca", "DES": "destreza", "CON": "constituicao", "INT": "inteligencia", "SAB": "sabedoria", "CAR": "carisma"}
+    atributos = {"forca": 10, "destreza": 10, "constituicao": 10, "inteligencia": 10, "sabedoria": 10, "carisma": 10}
+    moedas = {"ouro": 100, "prata": 0, "cobre": 0}
+    pericias = {"acrobacia": 0,"adestramento": 0,"arcanismo": 0,"atletismo": 0,"atuacao": 0,"enganacao": 0,"furtividade": 0,"historia": 0,"intimidacao": 0,"intuicao": 0,"investigacao": 0,"medicina": 0,"natureza": 0,"percepcao": 0,"persuasao": 0,"presdigitacao": 0,"religiao": 0,"sobrevivencia": 0}
+    
+    # Valores iniciais 
+    vida_base = next((item["valor"] for item in raca.race_traits.get("recursos", []) if item.get("reserva") == "vida"), 0)
+    mana_base = next((item["valor"] for item in raca.race_traits.get("recursos", []) if item.get("reserva") == "mana"), 0)
+    vigor_base = next((item["valor"] for item in raca.race_traits.get("recursos", []) if item.get("reserva") == "vigor"), 0)
+
+    recursos_bg = antecedente.background_traits.get("recurso", []) if antecedente else []
+    moedas["ouro"] += next((item["valor"] for item in recursos_bg if item.get("tipo") == "moedaOuro"), 0)
+    moedas["prata"] += next((item["valor"] for item in recursos_bg if item.get("tipo") == "moedaPrata"), 0)
+    moedas["cobre"] += next((item["valor"] for item in recursos_bg if item.get("tipo") == "moedaCobre"), 0)
+
+    if raca and "bonus_attr" in raca.race_traits:
+        for item in raca.race_traits["bonus_attr"]:
+            attr_nome = mapeamento.get(item["atributo"])
+            if attr_nome: atributos[attr_nome] += item["valor"]
+
+    if antecedente and "maestria" in antecedente.background_traits:
+        for item in antecedente.background_traits["maestria"]:
+            tipo = item.get("tipo", "")
+            if tipo == "pericia" and not item.get("selecionavel"):
+                valor_maestria = item.get("maestria")
+                bonus = item.get("valor", 0)
+
+                if valor_maestria in pericias:
+                    pericias[valor_maestria] += bonus
+
+    # --- Cálculos de Modificadores ---
+    mod_for = (atributos["forca"] - 10) // 2
+    mod_des = (atributos["destreza"] - 10) // 2
+    mod_con = (atributos["constituicao"] - 10) // 2
+    mod_int = (atributos["inteligencia"] - 10) // 2
+    mod_sab = (atributos["sabedoria"] - 10) // 2
+    mod_car = (atributos["carisma"] - 10) // 2
+    
+    # Cálculo de Rerservas Iniciais Máximas
+    vida_max = vida_base + mod_con
+    mana_max = mana_base + max(mod_int, mod_sab, mod_car)
+    vigor_max = vigor_base + mod_for + mod_des
+
+    # Monta os objetos JSONB conforme a estrutura do novo banco
+    character_info = char_in.character_info # idade, altura, etc que vem do front
+    
+    character_details = {
+        "xp": 0, "nivel": 1, "merito": 0, "rank": "",
+        "ca": 10 + mod_des, 
+        "titulos":[],
+        "iniciativa": 10 + mod_des,
+        "moedas": moedas,
+        "deslocamento": raca.race_traits.get("deslocamento", "9") if raca else "9",
+        "reservas": {
+            "vida": {"atual": vida_max, "maximo": vida_max, "dado": vida_base}, 
+            "mana": {"atual": mana_max, "maximo": mana_max, "dado": mana_base}, 
+            "vigor": {"atual": vigor_max, "maximo": vigor_max, "dado": vigor_base}
+        },
+
+    }
+
+    character_abilities = {
+        "atributos": atributos,
+        "pericias": pericias
+    }
+
+    character_equipment = {
+        "roupa": "Comum",
+        "mochila": {
+            "descricao": "Básica",
+            "slotsOcupados": 0,
+            "slotsTotais": 20
+        },
+        "armadura": {
+            "nome": "",
+            "descricao": ""
+        },
+        "acessorios": {
+            "nome": "",
+            "descricao": "",
+            "tipo": "",
+            "slotMagico": False,
+            "slotAlma": False
+        },
+        "cintura": {
+            "slot1": {
+            "nome": "",
+            "descricao": "", 
+            "tipo": "",
+            "slotMagico": False,
+            "slotAlma": False     
+            },
+            "slot2": {
+            "nome": "",
+            "descricao": "",
+            "tipo": "",
+            "slotMagico": False,
+            "slotAlma": False
+            }
+        },
+        "costas": {
+            "slot1": {
+            "nome": "",
+            "descricao": "", 
+            "tipo": "",
+            "slotMagico": False,
+            "slotAlma": False
+            },
+            "slot2": {
+            "nome": "",
+            "descricao": "",
+            "tipo": "",
+            "slotMagico": False,
+            "slotAlma": False
+            }
+        },
+        "peitoral": {
+            "slot1": {
+            "nome": "",
+            "descricao": "", 
+            "tipo": "",
+            "slotMagico": False,
+            "slotAlma": False
+            },
+            "slot2": {
+            "nome": "",
+            "descricao": "",
+            "tipo": "",
+            "slotMagico": False,
+            "slotAlma": False
+            }
+        }
+    }
+
+    # Retorna o objeto pronto para o SQLAlchemy
+    return models.Character(
+        character_uuid=str(uuid.uuid4()),
+        user_id=user_id,
+        race_id=char_in.race_id,
+        background_id=char_in.background_id,
+        character_name=char_in.character_name,
+        character_info=character_info,
+        character_details=character_details,
+        character_abilities=character_abilities, 
+        character_equipment=character_equipment, 
+        is_active=True
+    )

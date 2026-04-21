@@ -1,39 +1,100 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Tooltip } from "react-tooltip";
-import "./FichaPersonagem.css";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import Atributos from "../componentes/Atributos";
 import Reservas from "../componentes/Reservas";
-import EquipamentoCard from "../componentes/Equipamentos";
+import Moedas from "../componentes/Moedas";
+import SlotSimples from "../componentes/SlotSimples";
+import SlotDuplo from "../componentes/SlotDuplo";
 
-type PersonagemDetalhe = {
-  id: number;
-  nome_personagem: string;
-  sexo_personagem?: string;
-  raca_personagem?: string;
-  idade_personagem?: number;
-  altura_personagem?: string;
-  peso_personagem?: string;
-  antecedente?: string;
-  tendencia?: string;
-  nivel_personagem?: number;
-  pontos_experiencia?: number;
-  pontos_merito?: number;
-  rank?: string;
-  algibeira?: {
-    ouro?: number;
-    prata?: number;
-    cobre?: number;
+interface SlotEquipamento {
+  nome: string;
+  descricao?: string;
+  tipo?: string;
+  slotMagico?: boolean;
+  slotAlma?: boolean;
+}
+
+interface Titulo {
+  nome: string;
+  principal: boolean;
+}
+interface PersonagemDetalhe {
+  character_uuid: string;
+  race_id?: number;
+  race_name?: string;
+  background_id?: number;
+  background_name?: string;
+  character_name?: string;
+  character_info?: {
+    peso?: string;
+    idade?: string;
+    sexo?: string;
+    altura?: string;
+    tendencia?: string;
   };
-  atributos?: {
-    forca?: number;
-    destreza?: number;
-    constituicao?: number;
-    inteligencia?: number;
-    sabedoria?: number;
-    carisma?: number;
+  character_details?: {
+    ca?: number;
+    titulos?: Titulo[];
+    iniciativa?: number;
+    deslocamento?: number;
+    xp?: number;
+    merito?: number;
+    nivel?: number;
+    rank?: string;
+    moedas?: {
+      ouro?: number;
+      prata?: number;
+      cobre?: number;
+    };
+    reservas?: {
+      vida?: {
+        atual?: number;
+        maximo?: number;
+        dado?: number;
+      };
+      mana?: {
+        atual?: number;
+        maximo?: number;
+        dado?: number;
+      };
+      vigor?: {
+        atual?: number;
+        maximo?: number;
+        dado?: number;
+      };
+    };
   };
-  equipamentos?: {
+  character_abilities?: {
+    atributos?: {
+      forca?: number;
+      destreza?: number;
+      constituicao?: number;
+      inteligencia?: number;
+      sabedoria?: number;
+      carisma?: number;
+    };
+    pericias?: {
+      acrobacia?: number;
+      adestramento?: number;
+      arcanismo?: number;
+      atletismo?: number;
+      atuacao?: number;
+      enganacao?: number;
+      furtividade?: number;
+      historia?: number;
+      intimidacao?: number;
+      intuicao?: number;
+      investigacao?: number;
+      medicina?: number;
+      natureza?: number;
+      percepcao?: number;
+      persuasao?: number;
+      presdigitacao?: number;
+      religiao?: number;
+      sobrevivencia?: number;
+    };
+  };
+  character_equipment?: {
     roupa?: string;
     mochila?: {
       descricao?: string;
@@ -44,491 +105,410 @@ type PersonagemDetalhe = {
       nome?: string;
       descricao?: string;
     };
-    acessorios?: {
-      nome?: string;
-      efeito?: string;
-      tipo?: string;
-      slotMagico?: boolean;
-      slotAlma?: boolean;
-    };
+    acessorios?: SlotEquipamento[];
     cintura?: {
-      slot1?: {
-        nome?: string;
-        descricao?: string; 
-        tipo?: string;
-        slotMagico?: boolean;
-        slotAlma?: boolean;     
-      };
-      slot2?: {
-        nome?: string;
-        descricao?: string;
-        tipo?: string;
-        slotMagico?: boolean;
-        slotAlma?: boolean;
-      };
+      slot1?: SlotEquipamento;
+      slot2?: SlotEquipamento;
     };
     costas?: {
-      slot1?: {
-        nome?: string;
-        descricao?: string; 
-        tipo?: string;
-        slotMagico?: boolean;
-        slotAlma?: boolean;     
-      };
-      slot2?: {
-        nome?: string;
-        descricao?: string;
-        tipo?: string;
-        slotMagico?: boolean;
-        slotAlma?: boolean;
-      };
+      slot1?: SlotEquipamento;
+      slot2?: SlotEquipamento;
     };
     peitoral?: {
-      slot1?: {
-        nome?: string;
-        descricao?: string; 
-        tipo?: string;
-        slotMagico?: boolean;
-        slotAlma?: boolean;     
-      };
-      slot2?: {
-        nome?: string;
-        descricao?: string;
-        tipo?: string;
-        slotMagico?: boolean;
-        slotAlma?: boolean;
-      };
+      slot1?: SlotEquipamento;
+      slot2?: SlotEquipamento;
     };
   };
-  info_combate?: {
-    ca?: number;
-    iniciativa?: number;
-    deslocamento?: number;
-  };
-  reservas?: {
-    vida?: {
-      atual?: number;
-      maximo?: number;
-      dado?: number;
-    };
-    mana?: {
-      atual?: number;
-      maximo?: number;
-      dado?: number;
-    };
-    vigor?: {
-      atual?: number;
-      maximo?: number;
-      dado?: number;
-    };
-  };
-};
+}
+
+function LinhaEquipamento({
+  label,
+  item,
+}: {
+  label: string;
+  item?: SlotEquipamento | string;
+}) {
+  const nomeItem = typeof item === "object" ? item?.nome : item;
+  const isAlma = typeof item === "object" ? item?.slotAlma : false;
+  const isMagico = typeof item === "object" ? item?.slotMagico : false;
+
+  return (
+    <div className="group flex items-center justify-between bg-slate-950/40 border border-slate-800/50 p-2.5 rounded-lg hover:border-violet-500/30 transition-all">
+      <div className="flex flex-col">
+        <span className="text-[9px] font-black text-slate-600 uppercase tracking-tight">
+          {label}
+        </span>
+        <span
+          className={
+            nomeItem
+              ? "text-sm text-slate-200 font-medium"
+              : "text-sm text-slate-800 italic"
+          }
+        >
+          {nomeItem || ""}
+        </span>
+      </div>
+
+      {/* Indicadores Laterais */}
+      <div className="flex gap-1.5">
+        <div
+          title="Slot de Alma"
+          className={`w-2 h-4 rounded-sm border ${isAlma ? "bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)] border-cyan-400" : "bg-slate-900 border-slate-800"}`}
+        />
+        <div
+          title="Sintonização"
+          className={`w-2 h-4 rounded-sm border ${isMagico ? "bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)] border-violet-400" : "bg-slate-900 border-slate-800"}`}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function FichaPersonagem() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { uuid } = useParams();
   const [personagem, setPersonagem] = useState<PersonagemDetalhe | null>(null);
-  const [mostrar, setMostrar] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [dano, setDano] = useState<string>("0");
-  const [mana, setMana] = useState<string>("0");
-  const [vigor, setVigor] = useState<string>("0");
+  const [carregando, setCarregando] = useState(false);
 
   // Carregamento dos dados do personagem
   useEffect(() => {
-    const fetchPersonagem = async () => {
+    const buscarPersonagens = async () => {
+      const token = localStorage.getItem("token");
+      console.log("Token enviado:", token);
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`http://127.0.0.1:8000/personagem/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const response = await fetch(
+          `http://127.0.0.1:8000/personagens/${uuid}`,
+          {
+            method: "GET",
+            headers: {
+              // O espaço entre 'Bearer' e o token é obrigatório
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           },
-        });
+        );
 
-        if (!response.ok) {
+        if (response.ok) {
           const data = await response.json();
-          throw new Error(data.detail || "Erro ao carregar ficha");
+          setPersonagem(data);
+        } else if (response.status === 401) {
+          // Token expirado ou inválido
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+        }
+      } catch (error) {
+        console.error("Erro ao carregar personagens:", error);
+      } finally {
+        setCarregando(false);
+      }
+    };
+    buscarPersonagens();
+  }, [uuid]);
+
+  const autoSave = useCallback(
+    async (dados: PersonagemDetalhe) => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.warn("Usuário não autenticado. Salvamento cancelado.");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/personagens/${uuid}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(dados),
+          },
+        );
+
+        if (response.status === 401) {
+          console.error("Sessão expirada. Redirecionando para login...");
+          // Opcional: navigate("/login");
+          return;
         }
 
-        const data = await response.json();
-        setPersonagem(data);
+        if (response.ok) {
+          console.log("Sincronizado com o plano astral...");
+        }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Falha ao carregar a ficha";
-        console.error("Erro ao carregar ficha:", error);
-        setErro(message);
+        console.error("Erro na conexão ao salvar:", error);
       }
-    };
+    },
+    [uuid],
+  ); // Só recria a função se o UUID do personagem mudar
 
-    if (id) {
-      fetchPersonagem();
-    }
-  }, [id]);
+  useEffect(() => {
+    if (!personagem) return;
 
-  // Modificador de Atributo
-  const calcularModificador = (atributo?: number) => {
-    if (atributo === undefined) return 0;
-    return Math.floor((atributo - 10) / 2);
-  };
+    const delayDebounceFn = setTimeout(() => {
+      autoSave(personagem);
+    }, 1000);
 
-  // Atualização das reservas no backend
-  const atualizarReservas = async () => {
-    if (!personagem?.id) {
-      setErro("Personagem não carregado para atualização.");
-      return;
-    }
+    return () => clearTimeout(delayDebounceFn);
+  }, [personagem, autoSave]);
 
-    const novaVida = (personagem.reservas?.vida?.atual || 0) - Number(dano);
-    const novaMana = (personagem.reservas?.mana?.atual || 0) - Number(mana);
-    const novoVigor = (personagem.reservas?.vigor?.atual || 0) - Number(vigor);
+  const atualizarReservas = (
+    tipo: "vida" | "mana" | "vigor",
+    valor: number,
+  ) => {
+    setPersonagem((prev) => {
+      if (!prev) return prev;
+      // Pegamos o valor atual ou 0 se não existir
+      const atual = prev.character_details?.reservas?.[tipo]?.atual ?? 0;
+      const max = prev.character_details?.reservas?.[tipo]?.maximo ?? 1;
 
-    // Garanta que os valores finais sejam números inteiros
-    const payload = {
-      ...personagem,
-      reservas: {
-        ...personagem.reservas,
-        vida: {
-          ...personagem.reservas?.vida,
-          atual: novaVida >= 0 ? novaVida : 0,
-        },
-        mana: {
-          ...personagem.reservas?.mana,
-          atual: novaMana >= 0 ? novaMana : 0,
-        },
-        vigor: {
-          ...personagem.reservas?.vigor,
-          atual: novoVigor >= 0 ? novoVigor : 0,
-        },
-      },
-    };
+      // Garantimos que a vida/mana não fique negativa nem passe do máximo
+      const novoValor = Math.max(0, Math.min(max, atual + valor));
 
-    setLoading(true);
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/personagem/atualizar/${personagem.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+      return {
+        ...prev,
+        character_details: {
+          ...prev.character_details,
+          reservas: {
+            ...prev.character_details?.reservas,
+            [tipo]: {
+              ...prev.character_details?.reservas?.[tipo],
+              atual: novoValor,
+            },
           },
-          body: JSON.stringify(payload),
         },
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || "Erro ao atualizar personagem");
-      }
-
-      const data = await response.json();
-      setPersonagem(data);
-      setDano("0");
-      setMana("0");
-      setVigor("0");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Falha ao aplicar dano";
-      console.error("Erro ao aplicar dano:", error);
-      setErro(message);
-    } finally {
-      setLoading(false);
-    }
+      };
+    });
   };
 
+  const atualizarMoedas = (tipo: "ouro" | "prata" | "cobre", valor: number) => {
+    setPersonagem((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        character_details: {
+          ...prev.character_details,
+          moedas: {
+            ...prev.character_details?.moedas,
+            [tipo]: valor,
+          },
+        },
+      };
+    });
+  };
+
+  console.log("Conteúdo de character_details:", personagem?.character_details);
   return (
-    <div className="ficha-container">   {/*Container G1*/}
-      <div className="ficha-header">    {/*Header G2*/}
-        <button className="btn-secondary" onClick={() => navigate("/dashboard")}> Voltar
-        </button>
-        <h1>
-          {personagem?.nome_personagem}
-          <span style={{ marginLeft: "20px", fontSize: "20px" }}>
-            [{" "}
-             {personagem?.nivel_personagem ? personagem?.nivel_personagem : "1"}{" "}
-             ]
-           </span>
-         </h1>
-      </div>
-      <div className="ficha-notify">
-        <input type="checkbox" onClick={() => setMostrar(!mostrar)} />
-        {mostrar && (
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <label
-              style={{
-                fontWeight: "bold",
-                fontSize: "20px",
-                marginRight: "20px",
-                color: "rgb(113, 255, 85)",
-              }}
-            >Subir de Nível Disponível!!!
-            </label>
-            <button
-              className="btn-secondary"
-              onClick={() =>
-                alert("Função de promoção ainda não implementada")
-              }
-            > Promover
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="ficha-layout">    {/*Layout G2*/}
-        <div about="Info Básica" className="info-section">  {/*Seção G3*/}
-          <div className="info-item">
-            <span className="info-label">Raça:</span>
-            <span className="info-value"> {personagem?.raca_personagem || "Não informado"}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Antecedente:</span>
-            <span className="info-value"> {personagem?.antecedente || "Não informado"}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Tendência:</span>
-            <span className="info-value"> {personagem?.tendencia || "Não informado"}</span>
-          </div>
-          <div about="Detalhes" className="info-section" style={{display: 'flex', flexWrap: 'wrap', minWidth: '50%'}}>  {/*Seção G3*/}
-            <span className="info-label">Sexo:</span>{" "}
-            <span className="info-value"> {personagem?.sexo_personagem || "Não informado"}</span>
-            <span className="info-label">Idade:</span>{" "}
-            <span className="info-value"> {personagem?.idade_personagem ?? "Não informado"}</span>
-            <span className="info-label">Altura:</span>{" "}
-            <span className="info-value"> {personagem?.altura_personagem || "Não informado"}&nbsp;m</span>
-            <span className="info-label">Peso:</span>{" "}
-            <span className="info-value"> {personagem?.peso_personagem || "Não informado"}&nbsp;Kg</span>
+    <div className="container mx-auto px-6 py-8 bg-slate-950 min-h-screen text-slate-200">
+      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl mb-8 shadow-xl">
+        <div>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-white">
+            {personagem?.character_name}{" "}
+            <span className="text-2xl font-black text-violet-400">
+              [ {personagem?.character_details?.nivel || 0} ]
+            </span>
+          </h1>
+          <div className="flex gap-4 mt-2 text-violet-400 font-bold uppercase text-xs tracking-widest">
+            <span>{personagem?.race_name}</span>
+            <span className="text-slate-700">|</span>
+            <span>{personagem?.character_info?.tendencia}</span>
           </div>
         </div>
-        <div about="Evolucao" className="info-section">  {/*Seção G3*/}
-          <div about="pontos_XP" className="info-item">
-            <span className="info-label">Experiência</span>
-            <span className="info-value"> {personagem?.pontos_experiencia || 0}</span>
+        {/* Seção de Títulos */}
+        <div className="flex flex-col gap-2 mb-6">
+          {personagem?.character_details?.titulos?.map((titulo, index) =>
+            titulo.principal ? (
+              /* DESTAQUE: Título Principal */
+              <div
+                key={index}
+                className="flex items-center gap-2 group cursor-default"
+                title="Título Principal"
+              >
+                <span className="text-violet-500 animate-pulse text-lg">◈</span>
+                <h2 className="text-2xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]">
+                  {titulo.nome}
+                </h2>
+              </div>
+            ) : (
+              /* SECUNDÁRIOS: Menores e mais discretos */
+              <div
+                key={index}
+                className="flex items-center gap-2 ml-1 opacity-60 hover:opacity-100 transition-opacity"
+              >
+                <span className="text-slate-600 text-xs">◇</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  {titulo.nome}
+                </span>
+              </div>
+            ),
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* COLUNA ESQUERDA: Atributos e Reservas (Vida/Mana) */}
+        <div className="lg:col-span-4 space-y-8">
+          <div className="bg-slate-900 border border-slate-800 px-4 rounded-2xl shadow-lg">
+            <Moedas
+              dados={personagem?.character_details?.moedas}
+              onUpdate={atualizarMoedas}
+            />
           </div>
-          <div about="pontos_Merito" className="info-item">
-            <span className="info-label">Mérito</span>
-            <span className="info-value"> {personagem?.pontos_merito || 0}</span>
-          </div>          
-          <div about="rank_Militar" style={{ display: "flex", marginTop: "20px", gap: "10px", alignItems: "center" }}>
-            <strong className="info-label" style={{ minWidth: "100px" }}>Rank Militar</strong>
-            <label className="info_value">
-              {personagem?.rank?.toString() || "Não informado"}
-            </label>
-            <input type="checkbox" onClick={() => setMostrar(!mostrar)} />
-            {mostrar && (
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <label
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: "20px",
-                    color: "rgb(113, 255, 85)",
-                  }}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
+            <div className="flex justify-between items-center mb-4 ml-2">
+              <h2 className="text-xs font-black uppercase text-slate-500 mb-6 flex items-center gap-2">
+                <span className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                Atributos
+              </h2>
+              <button
+                onClick={() => alert("Abrindo edição de atributos...")}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-violet-400 text-[10px] font-black uppercase rounded-md border border-violet-900/30 transition-all mb-2 ml-2"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-tighter">
+                  Gerenciar
+                </span>
+              </button>
+            </div>
+            <Atributos dados={personagem?.character_abilities?.atributos} />
+          </div>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
+            <h2 className="text-xs font-black uppercase text-slate-500 mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+              Reservas
+            </h2>
+            <Reservas
+              dados={personagem?.character_details?.reservas}
+              onUpdate={atualizarReservas}
+            />
+          </div>
+        </div>
+
+        {/* COLUNA CENTRAL/DIREITA: Detalhes, Perícias e Equipamentos */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* Status Rápidos (CA, Iniciativa, etc) */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
+              <span className="block text-[10px] font-black uppercase text-slate-500">
+                Defesa
+              </span>
+              <span className="text-2xl font-bold text-white">
+                {personagem?.character_details?.ca}
+              </span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
+              <span className="block text-[10px] font-black uppercase text-slate-500">
+                Iniciativa
+              </span>
+              <span className="text-2xl font-bold text-white">
+                {personagem?.character_details?.iniciativa}
+              </span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
+              <span className="block text-[10px] font-black uppercase text-slate-500">
+                Deslocamento
+              </span>
+              <span className="text-2xl font-bold text-white">
+                {personagem?.character_details?.deslocamento}m
+              </span>
+            </div>
+          </div>
+
+          {/* Perícias (Grid de duas colunas) */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+            <h2 className="text-xs font-black uppercase text-slate-500 mb-4">
+              Perícias
+            </h2>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              {/* Mapeie suas perícias aqui conforme o retorno do backend */}
+              {Object.entries(
+                personagem?.character_abilities?.pericias || {},
+              ).map(([nome, valor]) => (
+                <div
+                  key={nome}
+                  className="flex justify-between border-b border-slate-800/50 py-1"
                 >
-                  Promoção de Rank Militar Disponível!!!
-                </label>
-                <button
-                  className="btn-secondary"
-                  onClick={() =>
-                    alert("Função de promoção ainda não implementada")
-                  }
-                >
-                  Promover
+                  <span className="capitalize text-sm text-slate-400">
+                    {nome}
+                  </span>
+                  <span className="font-bold text-violet-400">+{valor}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Container Principal de Equipamentos */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="titulo-secao-rpg flex items-center gap-2">
+                <span className="text-violet-500">◈</span> EQUIPAMENTOS
+                EQUIPADOS
+              </h2>
+              <div className="flex gap-2">
+                <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-violet-400 text-[10px] font-black uppercase rounded-md border border-violet-900/30 transition-all">
+                  Gerenciar
+                </button>
+                <button className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase rounded-md shadow-lg shadow-violet-900/20 transition-all">
+                  Mochila (
+                  {personagem?.character_equipment?.mochila?.slotsOcupados || 0}
+                  /{personagem?.character_equipment?.mochila?.slotsTotais || 0})
                 </button>
               </div>
-            )}
-          </div> 
-          <div about="Algibeira" className="info-section" style={{marginTop:'20px'}}>  {/*Seção G3*/}
-            <div about="moedaOuro" className="info-item">
-              <span className="info-label">Ouro</span>
-              <input
-                type="number"
-                className="info-value"
-                value={personagem?.algibeira?.ouro || 0}
-                onChange={(e) =>
-                  setPersonagem({
-                    ...personagem!,
-                    algibeira: {
-                      ...personagem?.algibeira,
-                      ouro: parseInt(e.target.value) || 0,
-                    },
-                  })
-                }
-              />
             </div>
-            <div about="moedaPrata" className="info-item">
-              <span className="info-label">Prata</span>
-              <input
-                type="number"
-                className="info-value"
-                value={personagem?.algibeira?.prata || 0}
-                onChange={(e) =>
-                  setPersonagem({
-                    ...personagem!,
-                    algibeira: {
-                      ...personagem?.algibeira,
-                      prata: parseInt(e.target.value) || 0,
-                    },
-                  })
-                }
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+              <div className="space-y-4">
+                <SlotSimples
+                  label="Roupa"
+                  valor={personagem?.character_equipment?.roupa}
+                />
+                <SlotSimples
+                  label="Armadura"
+                  valor={personagem?.character_equipment?.armadura?.nome}
+                />
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-black text-violet-500 uppercase tracking-widest mb-2">
+                    Acessórios
+                  </h3>
+                  {personagem?.character_equipment?.acessorios?.map(
+                    (acessório, i) => (
+                      <LinhaEquipamento
+                        key={i}
+                        label={`Acessório ${i + 1}`}
+                        item={acessório}
+                      />
+                    ),
+                  )}
+                  {(!personagem?.character_equipment?.acessorios ||
+                    personagem?.character_equipment?.acessorios?.length ===
+                      0) && (
+                    <div className="text-[10px] text-slate-800 italic p-2 border border-dashed border-slate-800 rounded-lg text-center">
+                      Nenhum acessório equipado
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <SlotDuplo
+                  label="Cintura"
+                  s1={personagem?.character_equipment?.cintura?.slot1?.nome}
+                  s2={personagem?.character_equipment?.cintura?.slot2?.nome}
+                />
+                <SlotDuplo
+                  label="Costas"
+                  s1={personagem?.character_equipment?.costas?.slot1?.nome}
+                  s2={personagem?.character_equipment?.costas?.slot2?.nome}
+                />
+                <SlotDuplo
+                  label="Peitoral"
+                  s1={personagem?.character_equipment?.peitoral?.slot1?.nome}
+                  s2={personagem?.character_equipment?.peitoral?.slot2?.nome}
+                />
+              </div>
             </div>
-            <div about="moedaCobre" className="info-item">
-              <span className="info-label">Cobre</span>
-              <input
-                type="number"
-                className="info-value"
-                value={personagem?.algibeira?.cobre || 0}
-                onChange={(e) =>
-                  setPersonagem({
-                    ...personagem!,
-                    algibeira: {
-                      ...personagem?.algibeira,
-                      cobre: parseInt(e.target.value) || 0,
-                    },
-                  })
-                }
-              />
-            </div>
-          </div>       
-        </div>
-        <div about="Atributos" className="info-section">  {/*Seção G3*/}
-          <div style={{display: 'flex'}}>
-            <h2>Atributos</h2>
-            <button className="btn-secondary" style={{marginLeft: 'auto', height: '50px'}} onClick={() => alert("Função de evolução de atributos ainda não implementada")}> Gerenciar Atributos</button>
-          </div>
-          <div className="atributos-grid"> {/*Grid para os atributos G4*/}
-            <Atributos label="Força" value={personagem?.atributos?.forca} />  
-            <Atributos label="Destreza" value={personagem?.atributos?.destreza} />
-            <Atributos label="Constituição" value={personagem?.atributos?.constituicao} />
-            <Atributos label="Inteligência" value={personagem?.atributos?.inteligencia} />
-            <Atributos label="Sabedoria" value={personagem?.atributos?.sabedoria} />
-            <Atributos label="Carisma" value={personagem?.atributos?.carisma} />
-          </div>
-        </div>
-        <div about="Reservas" className="info-section">  {/*Seção G3*/}
-          <h2>Reservas</h2>
-          <div className="atributos-grid">
-            <Reservas label="Vida" atual={personagem?.reservas?.vida?.atual} maximo={personagem?.reservas?.vida?.maximo} />
-            <Reservas label="Mana" atual={personagem?.reservas?.mana?.atual} maximo={personagem?.reservas?.mana?.maximo} />
-            <Reservas label="Vigor" atual={personagem?.reservas?.vigor?.atual} maximo={personagem?.reservas?.vigor?.maximo} />
-          </div>
-          <div about="gastoReservas" style={{display: 'flex', alignItems: 'center', marginTop: '20px'}}>
-            <strong className="info-label" style={{minWidth: '100px'}}>Controle de Reservas</strong>
-            <input type="number" className="info-value" placeholder="Dano" value={dano} disabled={!personagem} onBlur={() => atualizarReservas()} onChange={(e) => setDano(e.target.value)} onFocus={(e) => e.target.select()} />
-            <input type="number" className="info-value" placeholder="Mana" value={mana} disabled={!personagem} onBlur={() => atualizarReservas()} onChange={(e) => setMana(e.target.value)} onFocus={(e) => e.target.select()} />
-            <input type="number" className="info-value" placeholder="Vigor" value={vigor} disabled={!personagem} onBlur={() => atualizarReservas()} onChange={(e) => setVigor(e.target.value)} onFocus={(e) => e.target.select()} />
-          </div>
-        </div>
-        <div about="Pericias" className="pericias-container"> {/*Seção G3*/}
-          <h2>Perícias</h2>
-          <div className="pericias-header">
-            <span className="pericia-label-topo"></span>
-            <span className="pericia-label-topo">Mod</span>
-            <span className="pericia-label-topo">Passiva</span>
-          </div>
-          <div className="pericias-lista"> {/*Lista para as perícias G4*/}
-              <div className="pericia-linha">
-                <span className="pericia-nome">Acrobacia</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.destreza)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.destreza)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Adestramento</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.sabedoria)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.sabedoria)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Arcanismo</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.inteligencia)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.inteligencia)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Atletismo</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.forca)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.forca)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Atuação</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.carisma)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.carisma)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Enganação</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.carisma)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.carisma)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Furtividade</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.destreza)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.destreza)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">História</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.inteligencia)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.inteligencia)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Indimidação</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.carisma)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.carisma)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Intuição</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.sabedoria)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.sabedoria)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Investigação</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.inteligencia)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.inteligencia)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Medicina</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.sabedoria)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.sabedoria)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Natureza</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.inteligencia)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.inteligencia)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Percepção</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.sabedoria)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.sabedoria)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Persuasão</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.carisma)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.carisma)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Prestidigitação</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.destreza)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.destreza)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Religião</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.inteligencia)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.inteligencia)}</span>
-              </div>
-              <div className="pericia-linha">
-                <span className="pericia-nome">Sobrevivência</span>
-                <span className="pericia-valor">{calcularModificador(personagem?.atributos?.sabedoria)}</span>
-                <span className="pericia-valor">{10 + calcularModificador(personagem?.atributos?.sabedoria)}</span>
-              </div>
-          </div>
-        </div>
-        <div about="Equipamentos" className="equip-section">  {/*Seção G3*/}
-          <div style={{display: 'flex'}}>
-            <h2>Equipamentos</h2>
-            <button className="btn-secondary" style={{marginLeft: 'auto', height: '50px'}} onClick={() => alert("Função de evolução de atributos ainda não implementada")}> Gerenciar Eqipamentos</button>
-          </div>
-          <div className="equipamentos-grid"> {/*Grid para os equipamentos G4*/}
-            <EquipamentoCard dados={personagem?.equipamentos} />                
           </div>
         </div>
       </div>
     </div>
-  );  
+  );
 }

@@ -1,6 +1,7 @@
 # Python
 backend/__pycache__/
 *.pyc
+.env
 
 # React / Node
 frontend/node_modules/
