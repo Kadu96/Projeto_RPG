@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { ArrowUpCircleIcon } from '@heroicons/react/24/solid';
 import Atributos from '../componentes/Atributos';
 import Reservas from '../componentes/Reservas';
 import Moedas from '../componentes/Moedas';
 import SlotSimples from '../componentes/SlotSimples';
 import ModalAtributos, { type AtributosData } from '../componentes/ModalAtributos';
+import ModalTalentos from '../componentes/ModalTalentos';
 import {
   TABELA_XP_NIVEL,
   TABELA_MERITO_NIVEL,
@@ -213,6 +215,7 @@ export default function FichaPersonagem() {
   const xpAtual = personagem?.character_details?.xp || 0;
   const xpProximoNivel = TABELA_XP_NIVEL[nivelAtual + 1] || 0;
   const aptoParaLevelUp = podeSubirDeNivel(nivelAtual, xpAtual);
+  const xpDisponivel = xpAtual - TABELA_XP_NIVEL[nivelAtual] || 0;
 
   const rankAtual = personagem?.character_details?.rank || 1;
   const meritoAtual = personagem?.character_details?.merito || 0;
@@ -434,6 +437,28 @@ export default function FichaPersonagem() {
           </span>
         </div>
       )}
+      {/* Indicador de LevelUp Flutuante */}
+      {aptoParaLevelUp && (
+        <div className="fixed top-3 inset-x-0 flex justify-center z-[100] pointer-events-none">
+          <div className="flex items-center gap-2 bg-[#2ecc71] text-white px-4 py-2 rounded-full shadow-lg shadow-violet-900/40 backdrop-blur-sm animate-bounce pointer-events-auto">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Parabéns!! Você alcançou os requisitos para subir de nível!!
+            </span>
+          </div>
+        </div>
+      )}
+      {/* Indicador de RankUp Flutuante */}
+      {aptoParaRankUp && (
+        <div className="fixed top inset-x-0 flex justify-center z-[100] pointer-events-none">
+          <div className="flex items-center gap-2 bg-[#2ecc65] text-white px-4 py-2 rounded-full shadow-lg shadow-violet-900/40 backdrop-blur-sm animate-bounce pointer-events-auto">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Parabéns!! Você alcançou os requisitos para subir de rank!!
+            </span>
+          </div>
+        </div>
+      )}
       <div className="card-pagina">
         <div className="gap-4 p-6">
           <h1 className="text-4xl font-black uppercase tracking-tighter text-white">
@@ -488,8 +513,8 @@ export default function FichaPersonagem() {
         )}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* COLUNA ESQUERDA: Atributos e Reservas (Vida/Mana) */}
-        <div className="lg:col-span-4 space-y-5">
+        {/* COLUNA ESQUERDA */}
+        <div className="lg:col-span-4 space-y-3">
           {/* Barra de XP */}
           <div className="flex-1 max-w-xs group relative">
             <div className="flex flex-col justify-between text-[14px] font-black uppercase mb-1 tracking-tighter">
@@ -505,9 +530,12 @@ export default function FichaPersonagem() {
               />
             </div>
             {aptoParaLevelUp && (
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+              <span className="absolute -top-1 -right-1 flex h-8 w-8 justify-center items-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 pointer-events-none"></span>
+                <button
+                  onClick={() => alert("LevelUP")}
+                  className="hover:text-[#48bb78] transition-colors text-violet-500"
+                ><ArrowUpCircleIcon className="w-8 h-8" /></button>
               </span>
             )}
           </div>
@@ -526,9 +554,12 @@ export default function FichaPersonagem() {
               />
             </div>
             {aptoParaRankUp && (
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+              <span className="absolute -top-1 -right-1 flex h-8 w-8 justify-center items-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 pointer-events-none"></span>
+                <button
+                  onClick={() => alert("LevelUP")}
+                  className="hover:text-[#48bb78] transition-colors text-violet-500"
+                ><ArrowUpCircleIcon className="w-8 h-8" /></button>
               </span>
             )}
           </div>
@@ -565,9 +596,9 @@ export default function FichaPersonagem() {
             )}
           </div>
           {/* Atributos */}
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
-            <div className="flex justify-between items-center mb-4 ml-2">
-              <h2 className="titulo-secao-rpg mb-6 items-center gap-2">
+          <div className="bg-slate-950/40 border border-slate-800/50 rounded-xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-slate-800/50 bg-slate-900/50 flex justify-between items-center">
+              <h2 className="titulo-secao-rpg items-center gap-2">
                 <span className="text-violet-500 animate-pulse text-lg">◈</span> Atributos
               </h2>
               <button
@@ -577,38 +608,43 @@ export default function FichaPersonagem() {
                 <span className="text-[10px] font-bold uppercase tracking-tighter">Gerenciar</span>
               </button>
             </div>
-            <Atributos dados={personagem?.character_abilities?.atributos} />
+            <div className='p-4'><Atributos dados={personagem?.character_abilities?.atributos} /></div>
+            
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
-            <h2 className="titulo-secao-rpg mb-6 flex items-center gap-2">
-              <span className="text-violet-500 animate-pulse text-lg">◈</span> Reservas
-            </h2>
+          {/* Reservas */}
+          <div className="bg-slate-950/40 border border-slate-800/50 rounded-xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-slate-800/50 bg-slate-900/50 flex justify-between items-center">
+              <h2 className="titulo-secao-rpg items-center gap-2">
+                <span className="text-violet-500 animate-pulse text-lg">◈</span> Reservas
+              </h2>
+            </div>
+            <div className='p-6'>
             <Reservas
               dados={personagem?.character_details?.reservas}
               onUpdate={atualizarReservas}
-            />
+            /></div>
           </div>
         </div>
-        {/* COLUNA CENTRAL/DIREITA: Detalhes, Perícias e Equipamentos */}
-        <div className="lg:col-span-8 space-y-8">
+        {/* COLUNA CENTRAL/DIREITA */}
+        <div className="lg:col-span-8 space-y-3">
           {/* Status Rápidos (CA, Iniciativa, etc) */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-              <span className="block text-[10px] font-black uppercase text-slate-500">Defesa</span>
+            <div className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center">
+              <span className="block text-[14px] font-black uppercase text-slate-400">Defesa</span>
               <span className="text-2xl font-bold text-white">
                 {calcularDefesa(personagem?.character_equipment?.armadura?.defesa ?? 10)}
               </span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-              <span className="block text-[10px] font-black uppercase text-slate-500">
+            <div className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center">
+              <span className="block text-[14px] font-black uppercase text-slate-400">
                 Iniciativa
               </span>
               <span className="text-2xl font-bold text-white">
                 {10 + calcularModificador(personagem?.character_abilities?.atributos?.destreza)}
               </span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-center">
-              <span className="block text-[10px] font-black uppercase text-slate-500">
+            <div className="bg-slate-900 border border-slate-800 p-2 rounded-xl text-center">
+              <span className="block text-[14px] font-black uppercase text-slate-400">
                 Deslocamento
               </span>
               <span className="text-2xl font-bold text-white">
@@ -747,7 +783,7 @@ export default function FichaPersonagem() {
         isOpen={isModalAtributosAberto}
         onClose={() => setIsModalAtributosAberto(false)}
         atributos={personagem?.character_abilities?.atributos || {}}
-        xp={personagem?.character_details?.xp || 0}
+        xp={xpDisponivel}
         merito={personagem?.character_details?.merito || 0}
         onUpdateAtributo={atualizarAtributo}
       />
