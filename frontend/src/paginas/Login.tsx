@@ -24,7 +24,7 @@ export default function Login({ setToken }: { setToken: (t: string) => void }) {
 
       const data = await response.json();
       if (response.ok) {
-        localStorage.setItem("token", data.access_token);
+        sessionStorage.setItem("token", data.access_token);
         setToken(data.access_token);
         navigate('/dashboard');
         // window.location.href = "/dashboard";

@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 import uuid
 
@@ -68,6 +68,22 @@ def list_backgrounds (
         models.Background.is_active == True
     ).all()
 
+@app.get("/campanhas", response_model=List[schemas.AdventureResponse])
+def list_adventures (
+    db: Session =  Depends(get_db)
+):
+    return db.query(models.Adventure).filter(
+        models.Adventure.is_active == True
+    ).all()
+    
+@app.get("/talentos", response_model=List[schemas.FeatResponse])
+def list_feats (
+    db: Session =  Depends(get_db)
+):
+    return db.query(models.Feat).filter(
+        models.Feat.is_active == True
+    ).all()
+
 # --- ROTAS DE USUÁRIO ---
 
 @app.post("/usuario/cadastro")
@@ -120,7 +136,16 @@ def create_character(
         db.add(new_char)
         db.commit()
         db.refresh(new_char)
-        return new_char
+
+        # Recarrega com relações para garantir os nomes no retorno
+        db.refresh(new_char, ["raca", "antecedente", "campanha"])
+        
+        return {
+            **new_char.__dict__,
+            "race_name": new_char.raca.race_name if new_char.raca else None,
+            "background_name": new_char.antecedente.background_name if new_char.antecedente else None,
+            "adventure_name": new_char.campanha.adventure_name if new_char.campanha else None
+        }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Erro ao gerar ficha: {str(e)}")
@@ -141,13 +166,70 @@ def get_character(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id)
 ):
-    char = db.query(models.Character).filter(
+    # Usamos options(joinedload(...)) para trazer os dados das tabelas relacionadas
+    char = db.query(models.Character).options(
+        joinedload(models.Character.raca),
+        joinedload(models.Character.antecedente),
+        joinedload(models.Character.campanha),
+        joinedload(models.Character.talento).joinedload(models.AssCharactersFeat.talento)
+    ).filter(
         models.Character.character_uuid == char_uuid,
         models.Character.user_id == current_user_id
     ).first()
+
     if not char:
         raise HTTPException(status_code=404, detail="Personagem não encontrado")
-    return {**char.__dict__, "race_name": char.raca.race_name, "background_name": char.antecedente.background_name}
+    
+    return {
+        **char.__dict__, 
+        "race_name": char.raca.race_name if char.raca else None, 
+        "background_name": char.antecedente.background_name if char.antecedente else None,
+        "adventure_name": char.campanha.adventure_name if char.campanha else None,
+        "talento": char.talento
+    }
+
+
+@app.patch("/personagens/{char_uuid}/talento/{feat_id}", response_model=schemas.CharacterResponse)
+def toggle_character_feat(
+    char_uuid: str,
+    feat_id: int,
+    is_enabled: bool,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    char = db.query(models.Character).options(
+        joinedload(models.Character.raca),
+        joinedload(models.Character.antecedente),
+        joinedload(models.Character.campanha),
+        joinedload(models.Character.talento).joinedload(models.AssCharactersFeat.talento)
+    ).filter(
+        models.Character.character_uuid == char_uuid,
+        models.Character.user_id == current_user_id
+    ).first()
+    
+    if not char:
+        raise HTTPException(status_code=404, detail="Personagem não encontrado")
+
+    assoc = db.query(models.AssCharactersFeat).filter(
+        models.AssCharactersFeat.character_id == char.character_id,
+        models.AssCharactersFeat.feat_id == feat_id
+    ).first()
+
+    if not assoc:
+        raise HTTPException(status_code=404, detail="Talento não vinculado")
+
+    assoc.is_enabled = is_enabled
+    db.commit()
+    db.refresh(char)
+   
+    return {
+        **char.__dict__, 
+        "race_name": char.raca.race_name if char.raca else None, 
+        "background_name": char.antecedente.background_name if char.antecedente else None,
+        "adventure_name": char.campanha.adventure_name if char.campanha else None,
+        "talento": char.talento
+    } 
+
 
 @app.patch("/personagens/{char_uuid}", response_model=schemas.CharacterResponse)
 def update_character(

@@ -7,10 +7,10 @@ import CadastroUsuario from './paginas/CadastroUsuario';
 import FichaPersonagem from './paginas/FichaPersonagem';
 
 function App() {
-  const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
+  const [token, setToken] = useState<string | null>(sessionStorage.getItem("token"));
 
   useEffect(() => {
-    const handleStorage = () => setToken(localStorage.getItem("token"));
+    const handleStorage = () => setToken(sessionStorage.getItem("token"));
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);

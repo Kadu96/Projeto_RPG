@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ModalAtributosInicial, type AtributosData } from '../componentes/ModalAtributos';
 
 type CharacterForm = {
   character_name: string;
-  race_id: number;           // FK para a tabela de Raças
-  background_id: number;    // FK para a tabela de Antecedentes
+  race_id: number; // FK para a tabela de Raças
+  background_id: number; // FK para a tabela de Antecedentes
+  adventure_id: number;
   // O restante vai para o campo JSONB no backend
   character_info: {
     sexo: string;
@@ -13,53 +15,91 @@ type CharacterForm = {
     peso: string;
     tendencia: string;
   };
+  character_abilities?: {
+    atributos?: {
+      forca?: number;
+      destreza?: number;
+      constituicao?: number;
+      inteligencia?: number;
+      sabedoria?: number;
+      carisma?: number;
+    };
+  };
 };
 
 type Raca = { race_id: number; race_name: string };
 type Antecedente = { background_id: number; background_name: string };
+type Campanha = { adventure_id: number; adventure_name: string };
+
 
 export default function CriarPersonagem() {
   const navigate = useNavigate();
   const [ficha, setFicha] = useState<CharacterForm>({
-    character_name: "",
+    character_name: '',
     race_id: 0,
     background_id: 0,
+    adventure_id: 0, 
     character_info: {
-        sexo: "",
-        idade: "",
-        altura: "",
-        peso: "",
-        tendencia: ""
-    }
+      sexo: '',
+      idade: '',
+      altura: '',
+      peso: '',
+      tendencia: '',
+    },
+    character_abilities: {
+      atributos: {
+        forca: 10,
+        destreza: 10,
+        constituicao: 10,
+        inteligencia: 10,
+        sabedoria: 10,
+        carisma: 10,
+      }
+    },
   });
 
+  const [isModalAtributosAberto, setIsModalAtributosAberto] = useState(false);
   const [racasDisponiveis, setRacasDisponiveis] = useState<Raca[]>([]);
   const [antecedentesDisponiveis, setAntecedentesDisponiveis] = useState<Antecedente[]>([]);
+  const [campanhasDisponiveis, setCampanhasDisponiveis] = useState<Campanha[]>([]);
+  const [pontosRestantes, setPontosRestantes] = useState(27);
+
+  // Tabela de custos conforme sua regra
+  const CUSTO_ATRIBUTOS: Record<number, number> = {
+    10: 0,
+    11: 1,
+    12: 2,
+    13: 3,
+    14: 5,
+    15: 7,
+  };
 
   const tendencias = [
-    "Leal e Bom",
-    "Neutro e Bom",
-    "Caótico e Bom",
-    "Leal e Neutro",
-    "Neutro Verdadeiro",
-    "Caótico e Neutro",
-    "Leal e Mau",
-    "Neutro e Mau",
-    "Caótico e Mau",
+    'Leal e Bom',
+    'Neutro e Bom',
+    'Caótico e Bom',
+    'Leal e Neutro',
+    'Neutro Verdadeiro',
+    'Caótico e Neutro',
+    'Leal e Mau',
+    'Neutro e Mau',
+    'Caótico e Mau',
   ];
 
   useEffect(() => {
     const carregarDadosIniciais = async () => {
       try {
-        const [resRacas, resAntecedentes] = await Promise.all([
-          fetch("http://127.0.0.1:8000/racas"),
-          fetch("http://127.0.0.1:8000/antecedentes"),
+        const [resRacas, resAntecedentes, resCampanhas] = await Promise.all([
+          fetch('http://127.0.0.1:8000/racas'),
+          fetch('http://127.0.0.1:8000/antecedentes'),
+          fetch('http://127.0.0.1:8000/campanhas'),
         ]);
 
         setRacasDisponiveis(await resRacas.json());
         setAntecedentesDisponiveis(await resAntecedentes.json());
+        setCampanhasDisponiveis(await resCampanhas.json());
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+        console.error('Erro ao carregar dados:', error);
       }
     };
     carregarDadosIniciais();
@@ -68,42 +108,75 @@ export default function CriarPersonagem() {
   // Função genérica para atualizar qualquer campo
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFicha(prev => ({ ...prev, [name]: value } as CharacterForm));
+    // Converte IDs para número, caso contrário o backend rejeita como string
+    const isNumeric = ['race_id', 'background_id', 'adventure_id'].includes(name);
+    const val = isNumeric ? (value === "" ? 0 : parseInt(value)) : value;
+    setFicha((prev) => ({ ...prev, [name]: val }) as CharacterForm);
   };
 
   const handleChangeInfo = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFicha(prev => ({
-        ...prev,
-        character_info: {
-            ...prev.character_info,
-            [name]: value
-        }
+    setFicha((prev) => ({
+      ...prev,
+      character_info: {
+        ...prev.character_info,
+        [name]: value,
+      },
     }));
+  };
+
+  const atualizarAtributoInicial = (nome: keyof AtributosData, delta: number) => {
+    const atributosAtuais = ficha.character_abilities?.atributos || {};
+    const valorAtual = atributosAtuais[nome] ?? 10;
+    const novoValor = valorAtual + delta;
+
+    // Regras de Limite: Mínimo 10, Máximo 15
+    if (novoValor < 10 || novoValor > 15) return;
+
+    // Calcula a diferença de custo entre o valor atual e o novo
+    const custoAtual = CUSTO_ATRIBUTOS[valorAtual];
+    const custoNovo = CUSTO_ATRIBUTOS[novoValor];
+    const diffCusto = custoNovo - custoAtual;
+
+    if (diffCusto > pontosRestantes) return;
+
+    setFicha((prev) => ({
+      ...prev,
+      character_abilities: {
+        ...prev.character_abilities,
+        atributos: {
+          ...atributosAtuais,
+          [nome]: novoValor,
+        },
+      },
+    }));
+
+    setPontosRestantes((prev) => prev - diffCusto);
   };
 
   const handleSalvar = async (e: React.ChangeEvent) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem('token');
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/personagens/salvar", {
-        method: "POST",
+      const response = await fetch('http://127.0.0.1:8000/personagens/salvar', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`, // Enviamos o "crachá" de login
         },
         body: JSON.stringify(ficha),
       });
 
       if (response.ok) {
-        alert("Personagem criado com sucesso!");
-        navigate("/dashboard");
+        alert('Personagem criado com sucesso!');
+        navigate('/dashboard');
       }
     } catch (error) {
-      console.error("Erro ao salvar:", error);
+      console.error('Erro ao salvar:', error);
     }
   };
+
 
   return (
     <div className="max-w-2xl mx-auto py-10">
@@ -124,12 +197,25 @@ export default function CriarPersonagem() {
               placeholder="Ex: Valerius"
             />
           </div>
-
+          <div>
+            <label className="text-xs font-bold uppercase text-slate-500 ml-1">Campanha</label>
+            <select
+              name="adventure_id"
+              value={ficha.adventure_id}
+              onChange={handleChange}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white focus:border-violet-500 outline-none"
+            >
+              <option value="">Selecione...</option>
+              {campanhasDisponiveis.map((c) => (
+                <option key={c.adventure_id} value={c.adventure_id}>
+                  {c.adventure_name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-xs font-bold uppercase text-slate-500 ml-1">
-                Raça
-              </label>
+              <label className="text-xs font-bold uppercase text-slate-500 ml-1">Raça</label>
               <select
                 name="race_id"
                 value={ficha.race_id}
@@ -147,9 +233,7 @@ export default function CriarPersonagem() {
 
             {/* Sexo */}
             <div>
-              <label className="text-xs font-bold uppercase text-slate-500 ml-1">
-                Sexo
-              </label>
+              <label className="text-xs font-bold uppercase text-slate-500 ml-1">Sexo</label>
               <select
                 name="sexo"
                 value={ficha.character_info.sexo}
@@ -165,9 +249,7 @@ export default function CriarPersonagem() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-bold uppercase text-slate-500 ml-1">
-                Idade
-              </label>
+              <label className="text-xs font-bold uppercase text-slate-500 ml-1">Idade</label>
               <input
                 type="number"
                 name="idade"
@@ -177,9 +259,7 @@ export default function CriarPersonagem() {
               />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-500 ml-1">
-                Altura
-              </label>
+              <label className="text-xs font-bold uppercase text-slate-500 ml-1">Altura</label>
               <input
                 name="altura"
                 value={ficha.character_info.altura}
@@ -189,9 +269,7 @@ export default function CriarPersonagem() {
               />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-500 ml-1">
-                Peso
-              </label>
+              <label className="text-xs font-bold uppercase text-slate-500 ml-1">Peso</label>
               <input
                 name="peso"
                 value={ficha.character_info.peso}
@@ -203,9 +281,7 @@ export default function CriarPersonagem() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-xs font-bold uppercase text-slate-500 ml-1">
-                Antecedente
-              </label>
+              <label className="text-xs font-bold uppercase text-slate-500 ml-1">Antecedente</label>
               <select
                 name="background_id"
                 value={ficha.background_id}
@@ -221,9 +297,7 @@ export default function CriarPersonagem() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-500 ml-1">
-                Tendência
-              </label>
+              <label className="text-xs font-bold uppercase text-slate-500 ml-1">Tendência</label>
               <select
                 name="tendencia"
                 value={ficha.character_info.tendencia}
@@ -232,28 +306,48 @@ export default function CriarPersonagem() {
               >
                 <option value="">Selecione...</option>
                 {tendencias.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
           <div className="flex gap-4 pt-4">
+            <button 
+              type="button"
+              onClick={() => setIsModalAtributosAberto(true)}
+              className="flex-[2] py-4 bg-purple-800 hover:bg-violet-500 text-white font-black uppercase tracking-widest rounded-lg shadow-lg shadow-violet-900/30 transition-all transform active:scale-[0.98]">Distribuir Pontos de Atributo</button>
+          </div>
+          <div className="flex gap-4 pt-4">
             <button
               type="button"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate('/dashboard')}
               className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg transition-all"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-[2] py-4 bg-violet-600 hover:bg-violet-500 text-white font-black uppercase tracking-widest rounded-lg shadow-lg shadow-violet-900/30 transition-all transform active:scale-[0.98]"
+              disabled={pontosRestantes !== 0}
+              className={`flex-[2] py-4 font-black uppercase tracking-widest rounded-lg shadow-lg transition-all transform active:scale-[0.98] ${
+                pontosRestantes !== 0 
+                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed grayscale' 
+                  : 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-900/30'
+              }`}
             >
               Criar Ficha
             </button>
           </div>
         </form>
       </div>
+      <ModalAtributosInicial
+        isOpen={isModalAtributosAberto}
+        onClose={() => setIsModalAtributosAberto(false)}
+        atributos={ficha?.character_abilities?.atributos || {}}
+        pontos={pontosRestantes}
+        onUpdateAtributo={(nome, delta) => atualizarAtributoInicial(nome, delta)}
+      />
     </div>
   );
 }

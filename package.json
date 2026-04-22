@@ -1,6 +1,12 @@
 {
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"yellow,blue\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && venv\\Scripts\\python -m uvicorn main:app --reload",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
   "devDependencies": {
     "autoprefixer": "^10.5.0",
+    "concurrently": "^8.2.2",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.19"
   }
