@@ -1,23 +1,34 @@
-export interface PericiasData {
-  acrobacia: number,
-  adestramento: number,
-  arcanismo: number,
-  atletismo: number,
-  atuacao: number,
-  enganacao: number,
-  furtividade: number,
-  historia: number,
-  intimidacao: number,
-  intuicao: number,
-  investigacao: number,
-  medicina: number,
-  natureza: number,
-  percepcao: number,
-  persuasao: number,
-  presdigitacao: number,
-  religiao: number,
-  sobrevivencia: number,
+type NomePericia = 'acrobacia' | 'adestramento' | 'arcanismo' | 'atletismo' | 'atuacao' | 'enganacao' | 'furtividade' | 'historia' | 'intimidacao' | 'intuicao' | 'investigacao' | 'medicina' | 'natureza' | 'percepcao' | 'persuasao' | 'presdigitacao' | 'religiao' | 'sobrevivencia';
+
+export interface PericiaStatus {
+  nivel: number;
+  fragmentos: number;
+  nivelMaximo: number;
 }
+
+export type PericiasData = Record<NomePericia, PericiaStatus>;
+
+
+// export interface PericiasData {
+//   acrobacia: number,
+//   adestramento: number,
+//   arcanismo: number,
+//   atletismo: number,
+//   atuacao: number,
+//   enganacao: number,
+//   furtividade: number,
+//   historia: number,
+//   intimidacao: number,
+//   intuicao: number,
+//   investigacao: number,
+//   medicina: number,
+//   natureza: number,
+//   percepcao: number,
+//   persuasao: number,
+//   presdigitacao: number,
+//   religiao: number,
+//   sobrevivencia: number,
+// }
 
 interface ModalPericiasInicialProps {
   isOpen: boolean;
@@ -73,14 +84,17 @@ export default function ModalPericiasInicial({
         </div>
 
         {/* Lista de Pericias */}
-        <div className="space-y-3">
+        <div className="space-y-1 overflow-y-auto">
           {listaPericias.map((p) => (
-            <div key={p.key} className="flex items-center justify-between bg-slate-950/40 p-3 rounded-xl border border-slate-800/50 hover:border-violet-500/30 transition-colors">
+            <div key={p.key} className="flex items-center justify-between bg-slate-950/40 p-2 rounded-xl border border-slate-800/50 hover:border-violet-500/30 transition-colors">
               <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
                 {p.label}
               </span>
 
               <div className="flex items-center gap-4">
+              <span className="text-xs font-bold  text-slate-500">
+                {pericias[p.key].nivel} / {pericias[p.key].nivelMaximo}
+              </span>
                 <button
                   onClick={() => onUpdateAtributo(p.key, -1, 'pontos')}
                   className="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg border border-slate-700 transition-all font-black"
@@ -88,7 +102,7 @@ export default function ModalPericiasInicial({
                   -
                 </button>
                 <span className="text-xl font-black text-white w-6 text-center">
-                  {pericias[p.key] || 0}
+                  {pericias[p.key].fragmentos || 0}
                 </span>
                 <button
                   onClick={() => onUpdateAtributo(p.key, 1, 'pontos')}

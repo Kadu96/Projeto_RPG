@@ -5,13 +5,7 @@ import schemas
 
 
 def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_id: int):
-    # Busca Raça (usando os IDs do seu novo banco)
-    raca = db.query(models.Race).filter(models.Race.race_id == char_in.race_id).first()
-
-    # Validação de Segurança: Garante que os IDs existam antes de prosseguir
-    if not raca:
-        raise ValueError(f"Raça com ID {char_in.race_id} não encontrada.")
-
+    
     # --- Lógica de Cálculos (Mapeamento, Atributos, Moedas) ---
     mapeamento = {
         "FOR": "forca",
@@ -54,38 +48,6 @@ def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_i
         "sobrevivencia": 0,
     }
 
-    # Valores iniciais
-    vida_base = next(
-        (
-            item["valor"]
-            for item in raca.race_traits.get("recursos", [])
-            if item.get("reserva") == "vida"
-        ),
-        0,
-    )
-    mana_base = next(
-        (
-            item["valor"]
-            for item in raca.race_traits.get("recursos", [])
-            if item.get("reserva") == "mana"
-        ),
-        0,
-    )
-    vigor_base = next(
-        (
-            item["valor"]
-            for item in raca.race_traits.get("recursos", [])
-            if item.get("reserva") == "vigor"
-        ),
-        0,
-    )
-
-    if raca and "bonus_attr" in raca.race_traits:
-        for item in raca.race_traits["bonus_attr"]:
-            attr_nome = mapeamento.get(item["atributo"])
-            if attr_nome:
-                atributos[attr_nome] += item["valor"]
-
     # --- Cálculos de Modificadores ---
     mod_for = (atributos["forca"] - 10) // 2
     mod_des = (atributos["destreza"] - 10) // 2
@@ -108,7 +70,7 @@ def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_i
         "merito": 0,
         "rank": 0,
         "titulos": [],
-        "maestrias": [],
+        "maestrias": char_in.character_details.get("maestrias", []) if char_in.character_details else [],
         "moedas": moedas,
         "deslocamento": raca.race_traits.get("deslocamento", "9") if raca else "9",
         "reservas": {

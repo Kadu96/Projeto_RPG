@@ -114,7 +114,7 @@ def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     access_token = criar_token_acesso(data={"sub": str(user.user_id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
-# --- ROTAS DE PERSONAGEM (CRUD) ---
+# --- ROTAS DE PERSONAGEM ---
 
 @app.post("/personagens/salvar", response_model=schemas.CharacterResponse)
 def create_character(
@@ -161,7 +161,6 @@ def get_character(
     # Usamos options(joinedload(...)) para trazer os dados das tabelas relacionadas
     char = db.query(models.Character).options(
         joinedload(models.Character.raca),
-        joinedload(models.Character.antecedente),
         joinedload(models.Character.campanha),
         joinedload(models.Character.talento).joinedload(models.AssCharactersFeat.talento)
     ).filter(
@@ -175,11 +174,9 @@ def get_character(
     return {
         **char.__dict__, 
         "race_name": char.raca.race_name if char.raca else None, 
-        "background_name": char.antecedente.background_name if char.antecedente else None,
         "adventure_name": char.campanha.adventure_name if char.campanha else None,
         "talento": char.talento
     }
-
 
 @app.patch("/personagens/{char_uuid}/talento/{feat_id}", response_model=schemas.CharacterResponse)
 def toggle_character_feat(
@@ -191,7 +188,6 @@ def toggle_character_feat(
 ):
     char = db.query(models.Character).options(
         joinedload(models.Character.raca),
-        joinedload(models.Character.antecedente),
         joinedload(models.Character.campanha),
         joinedload(models.Character.talento).joinedload(models.AssCharactersFeat.talento)
     ).filter(
@@ -217,7 +213,6 @@ def toggle_character_feat(
     return {
         **char.__dict__, 
         "race_name": char.raca.race_name if char.raca else None, 
-        "background_name": char.antecedente.background_name if char.antecedente else None,
         "adventure_name": char.campanha.adventure_name if char.campanha else None,
         "talento": char.talento
     } 
