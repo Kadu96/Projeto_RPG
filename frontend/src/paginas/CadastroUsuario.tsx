@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { Eye, EyeOff } from 'lucide-react'
+import { API_BASE_URL } from '../shared';
 
 interface UserRegisterData {
     user_name: string;
@@ -33,7 +33,7 @@ export default function CadastroUsuario() {
         }
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/usuario/cadastro", {
+            const response = await fetch(`${API_BASE_URL}/usuario/cadastro`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(usuario)
@@ -61,28 +61,28 @@ export default function CadastroUsuario() {
 
                 <form onSubmit={handleCadastro} className="space-y-5">
                     <div>
-                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Nome de Exibição</label>
+                        <label className="label-rpg">Nome de Exibição</label>
                         <input 
-                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all"
+                            className="input-rpg"
                             placeholder="Ex: Arwen Evenstar" 
                             onChange={e => setUsuario({...usuario, user_name: e.target.value})} 
                         />
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Login de Acesso</label>
+                        <label className="label-rpg">Login de Acesso</label>
                         <input 
-                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all"
+                            className="input-rpg"
                             placeholder="login_unico" 
                             onChange={e => setUsuario({...usuario, user_login: e.target.value})} 
                         />
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">E-mail</label>
+                        <label className="label-rpg">E-mail</label>
                         <input 
                             type="email"
-                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all"
+                            className="input-rpg"
                             placeholder="seu@email.com" 
                             onChange={e => setUsuario({...usuario, user_email: e.target.value})} 
                         />
@@ -90,12 +90,12 @@ export default function CadastroUsuario() {
 
                     {/* Campo de Senha com Olhinho */}
                     <div className="relative">
-                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Senha</label>
+                        <label className="label-rpg">Senha</label>
                         <div className="relative">
                             <input 
                                 type={mostrarSenha ? "text" : "password"}
                                 maxLength={32} minLength={8} 
-                                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 pr-12 text-white focus:border-violet-500 outline-none transition-all"
+                                className="input-rpg pr-12"
                                 placeholder="••••••••" 
                                 onChange={e => setUsuario({...usuario, user_pass: e.target.value})} 
                             />
@@ -113,12 +113,12 @@ export default function CadastroUsuario() {
 
                     {/* Campo de Confirmação */}
                     <div className="relative">
-                        <label className="text-xs font-bold uppercase text-slate-500 ml-1">Senha</label>
+                        <label className="label-rpg">Senha</label>
                         <div className="relative">
                             <input 
                                 type={mostrarSenha ? "text" : "password"} 
                                 maxLength={32} minLength={8} 
-                                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 pr-12 text-white focus:border-violet-500 outline-none transition-all"
+                                className="input-rpg pr-12"
                                 placeholder="••••••••" 
                                 onChange={e => setConfirmarSenha(e.target.value)} 
                             />

@@ -60,14 +60,6 @@ def list_races(
         models.Race.is_active == True
     ).all()
 
-@app.get("/antecedentes", response_model=List[schemas.BackgroundResponse])
-def list_backgrounds (
-    db: Session =  Depends(get_db)
-):
-    return db.query(models.Background).filter(
-        models.Background.is_active == True
-    ).all()
-
 @app.get("/campanhas", response_model=List[schemas.AdventureResponse])
 def list_adventures (
     db: Session =  Depends(get_db)
@@ -229,7 +221,6 @@ def toggle_character_feat(
         "adventure_name": char.campanha.adventure_name if char.campanha else None,
         "talento": char.talento
     } 
-
 
 @app.patch("/personagens/{char_uuid}", response_model=schemas.CharacterResponse)
 def update_character(

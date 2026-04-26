@@ -25,18 +25,7 @@ class Race(Base):
     race_traits = Column(MutableDict.as_mutable(JSONB), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
 
-    personagens = relationship("Character", back_populates="raca")
-
-class Background(Base):
-    __tablename__ = "backgrounds"
-
-    background_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
-    background_name = Column(String, nullable=False)
-    background_description = Column(String, nullable=False)
-    background_traits = Column(MutableDict.as_mutable(JSONB), nullable=False)
-    is_active = Column(Boolean, nullable=False, default=True)
-
-    personagens = relationship("Character", back_populates="antecedente")
+    personagem = relationship("Character", back_populates="raca")
 
 class Feat(Base):
     __tablename__ = "feats"
@@ -50,15 +39,15 @@ class Feat(Base):
     personagem = relationship("AssCharactersFeat", back_populates="talento")
 
 class Character(Base):
-    __tablename__ = "characters"
+    __tablename__ = "personagens"
 
     character_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
     character_uuid = Column(String, nullable=False, unique=True)
     user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     race_id = Column(Integer, ForeignKey("races.race_id", ondelete="SET NULL", onupdate="CASCADE"), nullable=False)
-    background_id = Column(Integer, ForeignKey("backgrounds.background_id", ondelete="SET NULL", onupdate="CASCADE"), nullable=False)
     adventure_id = Column(Integer, ForeignKey("adventures.adventure_id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
     character_name = Column(String, nullable=False, unique=True)
+    url_image = Column(String)
     
     # Uso de MutableDict para permitir detecção de mudanças internas no JSONB
     character_info = Column(MutableDict.as_mutable(JSONB), nullable=False)
@@ -68,8 +57,7 @@ class Character(Base):
     
     is_active = Column(Boolean, nullable=False, default=True)
 
-    raca = relationship("Race", back_populates="personagens")
-    antecedente = relationship("Background", back_populates="personagens")
+    raca = relationship("Race", back_populates="personagem")
     talento = relationship("AssCharactersFeat", back_populates="personagem")
     campanha = relationship("Adventure", back_populates="personagem")
 
@@ -82,7 +70,7 @@ class AssCharactersFeat(Base):
     __tablename__ = "ass_characters_feat"
 
     ass_characters_feat_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
-    character_id = Column(Integer, ForeignKey("characters.character_id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
+    character_id = Column(Integer, ForeignKey("personagens.character_id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     feat_id = Column(Integer, ForeignKey("feats.feat_id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     is_enabled = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)

@@ -1,18 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowUpCircleIcon } from '@heroicons/react/24/solid';
 import Atributos from '../componentes/Atributos';
 import Reservas from '../componentes/Reservas';
 import Moedas from '../componentes/Moedas';
+import MaestriaCard from '../componentes/Maestrias';
 import SlotSimples from '../componentes/SlotSimples';
 import ModalAtributos, { type AtributosData } from '../componentes/ModalAtributos';
 import ModalTalentos from '../componentes/ModalTalentos';
+import ModalTitulos from '../componentes/ModalTitulos';
 import {
   TABELA_XP_NIVEL,
   TABELA_MERITO_NIVEL,
   podeSubirDeNivel,
   podeSubirDeRank,
 } from '../utils/regrasRpg';
+import {
+  API_BASE_URL,
+  getAuthHeaders,
+  handleAuthError,
+  calcularModificador,
+  MAPEAMENTO_RANKS,
+} from '../shared';
 
 interface SlotEquipamento {
   nome: string;
@@ -24,7 +33,16 @@ interface SlotEquipamento {
 
 interface Titulo {
   nome: string;
+  identificador: number;
   principal: boolean;
+  ativo: boolean;
+}
+
+interface Maestria {
+  nome: string;
+  nivel: number;
+  fragmentos: number;
+  nivelMaximo: number;
 }
 
 interface AssFeatDetalhe {
@@ -40,9 +58,8 @@ interface PersonagemDetalhe {
   character_uuid: string;
   race_id?: number;
   race_name?: string;
-  background_id?: number;
-  background_name?: string;
   character_name?: string;
+  url_image?: string | null;
   character_info?: {
     peso?: string;
     idade?: string;
@@ -53,9 +70,10 @@ interface PersonagemDetalhe {
   talento?: AssFeatDetalhe[];
   character_details?: {
     ca?: number;
-    titulos?: Titulo[];
+    titulos?: Titulo[] | undefined;
+    maestria?: Maestria[];
     iniciativa?: number;
-    deslocamento?: number;
+    deslocamento?: number | string;
     xp?: number;
     merito?: number;
     nivel?: number;
@@ -133,8 +151,6 @@ interface PersonagemDetalhe {
   };
 }
 
-const calcularModificador = (valor: number = 10) => Math.floor((valor - 10) / 2);
-
 const mapeamentoPericias: Record<string, keyof AtributosData> = {
   acrobacia: 'destreza',
   adestramento: 'sabedoria',
@@ -154,16 +170,6 @@ const mapeamentoPericias: Record<string, keyof AtributosData> = {
   presdigitacao: 'destreza',
   religiao: 'inteligencia',
   sobrevivencia: 'sabedoria',
-};
-
-const mapeamentoRanks: Record<number, string> = {
-  1: 'Recrutado',
-  2: 'Vigilante',
-  3: 'Guardião',
-  4: 'Pretor',
-  5: 'Arconte',
-  6: 'Exarca',
-  7: 'Primarca',
 };
 
 function LinhaEquipamento({ label, item }: { label: string; item?: SlotEquipamento | string }) {
@@ -207,9 +213,9 @@ export default function FichaPersonagem() {
   const [salvando, setSalvando] = useState(false);
   const [isModalAtributosAberto, setIsModalAtributosAberto] = useState(false);
   const [isModalTalentosAberto, setIsModalTalentosAberto] = useState(false);
-
-  const has_title = (personagem?.character_details?.titulos?.length ?? 0) > 0;
-  const has_rank = (personagem?.character_details?.rank ?? 0) > 0;
+  const [isModalTitulosAberto, setIsModalTitulosAberto] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   const nivelAtual = personagem?.character_details?.nivel || 1;
   const xpAtual = personagem?.character_details?.xp || 0;
@@ -222,8 +228,14 @@ export default function FichaPersonagem() {
   const meritoProximoNivel = TABELA_MERITO_NIVEL[rankAtual + 1] || 0;
   const aptoParaRankUp = podeSubirDeRank(rankAtual, meritoAtual);
 
-  const talentosHabilitados = personagem?.talento?.filter(f => f.is_enabled);
-  // const talentosPassivos = personagem?.talento?.filter(f => !f.is_enabled);
+  const talentosAtivos = personagem?.talento?.filter((f) => f.is_enabled);
+  const titulosAtivos = personagem?.character_details?.titulos?.filter((f) => f.ativo);
+  const maestrias = personagem?.character_details?.maestria;
+
+
+  const has_title = (titulosAtivos?.length ?? 0) > 0;
+  const has_rank = (personagem?.character_details?.rank ?? 0) > 0;
+
 
   // Carregamento dos dados do personagem
   useEffect(() => {
@@ -242,8 +254,9 @@ export default function FichaPersonagem() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log("Dados do Personagem:", data);
+          console.log('Dados do Personagem:', data);
           setPersonagem(data);
+          if (data.url_image) setUrlInput(data.url_image);
         } else if (response.status === 401) {
           // Token expirado ou inválido
           sessionStorage.removeItem('token');
@@ -260,28 +273,16 @@ export default function FichaPersonagem() {
 
   const autoSave = useCallback(
     async (dados: PersonagemDetalhe) => {
-      const token = sessionStorage.getItem('token');
-
-      if (!token) {
-        console.warn('Usuário não autenticado. Salvamento cancelado.');
-        return;
-      }
-
       setSalvando(true);
       const inicio = Date.now(); // Marca o momento em que o salvamento começou
       try {
-        const response = await fetch(`http://127.0.0.1:8000/personagens/${uuid}`, {
+        const response = await fetch(`${API_BASE_URL}/personagens/${uuid}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          headers: getAuthHeaders(),
           body: JSON.stringify(dados),
         });
 
-        if (response.status === 401) {
-          console.error('Sessão expirada. Redirecionando para login...');
-          // Opcional: navigate("/login");
+        if (handleAuthError(response.status)) {
           return;
         }
 
@@ -315,6 +316,17 @@ export default function FichaPersonagem() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [personagem, autoSave]);
+
+  const handleSaveImage = () => {
+    const finalUrl = urlInput.trim() || null;
+    setPersonagem((prev) => (prev ? { ...prev, url_image: finalUrl } : null));
+    setIsEditing(false);
+  };
+
+  const handleCancelEditImage = () => {
+    setUrlInput(personagem?.url_image || '');
+    setIsEditing(false);
+  };
 
   const atualizarReservas = (tipo: 'vida' | 'mana' | 'vigor', valor: number) => {
     setPersonagem((prev) => {
@@ -359,6 +371,38 @@ export default function FichaPersonagem() {
     });
   };
 
+  const atualizarNivel = (delta: number) => {
+    setPersonagem((prev) => {
+      if (!prev) return prev;
+
+      const novoNivel = delta;
+
+      return {
+        ...prev,
+        character_details: {
+          ...prev.character_details,
+          nivel: novoNivel,
+        },
+      };
+    });
+  };
+
+  const atualizarRank = (delta: number) => {
+    setPersonagem((prev) => {
+      if (!prev) return prev;
+
+      const novoRank = delta;
+
+      return {
+        ...prev,
+        character_details: {
+          ...prev.character_details,
+          rank: novoRank,
+        },
+      };
+    });
+  };
+
   const atualizarAtributo = (
     nome: keyof AtributosData,
     delta: number,
@@ -398,12 +442,14 @@ export default function FichaPersonagem() {
   };
 
   const alternarTalento = async (featId: number, habilitar: boolean) => {
-    const token = sessionStorage.getItem('token');
     try {
-      const response = await fetch(`http://127.0.0.1:8000/personagens/${uuid}/talento/${featId}?is_enabled=${habilitar}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/personagens/${uuid}/talento/${featId}?is_enabled=${habilitar}`,
+        {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -412,6 +458,25 @@ export default function FichaPersonagem() {
     } catch (error) {
       console.error('Erro ao alternar talento:', error);
     }
+  };
+
+  const alternarTitulos = async (titleID: number, label: 'ativo' | 'principal', valor: boolean) => {
+    setPersonagem((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        character_details: {
+          ...prev.character_details,
+          titulos: prev.character_details?.titulos?.map((titulo) => {
+            if (titulo.identificador === titleID) {
+              return { ...titulo, [label]: valor };
+            }
+            return titulo;
+          }),
+        },
+      };
+    });
   };
 
   const calcularDefesa = (valor: number = 10) => {
@@ -426,6 +491,50 @@ export default function FichaPersonagem() {
     return defesaBase + mod;
   };
 
+  const ListaTitulos = ({ titulosAtivos }: { titulosAtivos: Titulo[] }) => {
+    const titulosProcessados = useMemo(() => {
+      return [...titulosAtivos].sort((a, b) => {
+        // Prioridade para o principal
+        if (a.principal !== b.principal) return a.principal ? -1 : 1;
+
+        // Ordem alfabética para o resto (pelo campo 'nome' ou 'titulo')
+        return a.nome.localeCompare(b.nome);
+      });
+    }, [titulosAtivos]);
+
+    return (
+      <div>
+        {titulosProcessados?.map((item) =>
+          item.principal ? (
+            /* DESTAQUE: Título Principal */
+            <div
+              key={item.identificador}
+              className="flex items-center gap-2 group cursor-default"
+              title="Título Principal"
+            >
+              <span className="text-violet-500 animate-pulse text-lg">◈</span>
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]">
+                {item.nome}
+              </h2>
+            </div>
+          ) : (
+            /* SECUNDÁRIOS: Menores e mais discretos */
+            <div
+              key={item.identificador}
+              className="flex items-center gap-2 ml-1 opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <span className="text-slate-600 text-xs">◇</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                {item.nome}
+              </span>
+            </div>
+          ),
+        )}
+      </div>
+    );
+  };
+
+   console.log(personagem);
   return (
     <div className="container mx-auto px-6 py-8 bg-slate-950 min-h-screen text-slate-200">
       {/* Indicador de Salvamento Flutuante */}
@@ -459,170 +568,242 @@ export default function FichaPersonagem() {
           </div>
         </div>
       )}
-      <div className="card-pagina">
-        <div className="gap-4 p-6">
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-white">
-            {personagem?.character_name}{' '}
-            <div className="inline-flex flex-col ml-2">
-              <span className="text-2xl font-black text-violet-400">[ {nivelAtual} ]</span>
-            </div>
-          </h1>
-          <div className="flex flex-col md:flex-row md:items-center gap-4 mt-2">
-            <div className="flex gap-4 text-violet-400 font-bold uppercase text-xs tracking-widest">
-              <span>{personagem?.race_name}</span>
-              <span className="text-slate-700">|</span>
-              <span>{personagem?.character_info?.tendencia}</span>
-            </div>
-          </div>
-          {has_rank && (
-            <div className="flex text-2xl font-black items-center gap-2 group cursor-default ml-5 mt-3">
-              <span className="text-violet-500 animate-pulse text-lg">◈</span>
-              <h2>{mapeamentoRanks[rankAtual]}</h2>
-            </div>
-          )}
-        </div>
-        {has_title && (
-          <div className="flex flex-col gap-2 mb-6 p-6">
-            {personagem?.character_details?.titulos?.map((titulo, index) =>
-              titulo.principal ? (
-                /* DESTAQUE: Título Principal */
-                <div
-                  key={index}
-                  className="flex items-center gap-2 group cursor-default"
-                  title="Título Principal"
-                >
-                  <span className="text-violet-500 animate-pulse text-lg">◈</span>
-                  <h2 className="text-2xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]">
-                    {titulo.nome}
-                  </h2>
+      {/* header */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Imagem Personagem */}
+        <div className="lg:col-span-3 space-y-3">
+          <div className=" text-sm text-slate-200 font-medium tracking-tight px-1 leading-none">
+            {/* Container da Imagem */}
+            <div className="relative group flex flex-col w-full h-64 border-2 border-dashed border-slate-700 rounded-lg items-center justify-center overflow-hidden bg-slate-950">
+              <div className="flex-grow w-full flex items-center justify-center text-sm text-center">
+                {personagem?.url_image ? (
+                  <img
+                    src={personagem.url_image}
+                    alt="Imagem do Personagem"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  ' '
+                )}
+              </div>
+              {/* Camada de UI */}
+              {isEditing ? (
+                /* Modo de Edição: Sempre visível */
+                <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-sm p-4 flex flex-col justify-center gap-3 animate-in fade-in zoom-in-95 duration-200">
+                  <label className="text-[10px] font-black uppercase text-violet-400 tracking-widest text-center">
+                    URL da Imagem
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Cole o link ou apague para remover..."
+                    className="w-full px-3 py-2 bg-slate-900 border border-violet-500 rounded-md text-white text-sm outline-none focus:ring-1 focus:ring-violet-500"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveImage}
+                      className="flex-1 bg-violet-600 text-white py-2 rounded-md font-bold text-xs hover:bg-violet-500 uppercase tracking-tighter"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={handleCancelEditImage}
+                      className="flex-1 bg-slate-800 text-slate-400 py-2 rounded-md font-bold text-xs hover:bg-slate-700 uppercase tracking-tighter"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               ) : (
-                /* SECUNDÁRIOS: Menores e mais discretos */
+                /* Modo Normal: Botão no Hover se houver imagem, ou fixo se não houver */
                 <div
-                  key={index}
-                  className="flex items-center gap-2 ml-1 opacity-60 hover:opacity-100 transition-opacity"
+                  className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${personagem?.url_image ? 'bg-black/60 opacity-0 group-hover:opacity-100' : ''}`}
                 >
-                  <span className="text-slate-600 text-xs">◇</span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                    {titulo.nome}
-                  </span>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-6 py-2 bg-violet-600/90 hover:bg-violet-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg transition-transform transform active:scale-95"
+                  >
+                    {personagem?.url_image ? 'Alterar Imagem' : 'Adicionar Imagem'}
+                  </button>
                 </div>
-              ),
-            )}
+              )}
+            </div>
           </div>
-        )}
+        </div>
+        {/* Cabeçalho */}
+        <div className="lg:col-span-9 space-y-3">
+          {/* Personagem */}
+          <div className="card-pagina">
+            <div className="gap-4 p-6">
+              <h1 className="text-4xl font-black uppercase tracking-tighter text-white">
+                {personagem?.character_name}{' '}
+                <div className="inline-flex flex-col ml-2">
+                  <span className="text-2xl font-black text-violet-400">[ {nivelAtual} ]</span>
+                </div>
+              </h1>
+              <div className="flex flex-col md:flex-row md:items-center gap-4 mt-2">
+                <div className="flex gap-4 text-violet-400 font-bold uppercase text-xs tracking-widest">
+                  <span>{personagem?.race_name}</span>
+                  <span className="text-slate-700">|</span>
+                  <span>{personagem?.character_info?.tendencia}</span>
+                </div>
+              </div>
+              {has_rank && (
+                <div className="flex text-2xl font-black items-center gap-2 group cursor-default ml-5 mt-3">
+                  <span className="text-violet-500 animate-pulse text-lg">◈</span>
+                  <h2>{MAPEAMENTO_RANKS[rankAtual]}</h2>
+                </div>
+              )}
+            </div>
+            {/* Títulos */}
+            <div className="flex flex-col gap-2 mb-6 p-6">
+              <button
+                onClick={() => setIsModalTitulosAberto(true)}
+                className="btn-header-rpg px-2 py-1 text-[9px] text-right"
+              >
+                Gerenciar
+              </button>
+              {has_title && (
+                <ListaTitulos titulosAtivos={titulosAtivos || []} />
+              )}
+            </div>
+          </div>
+          {/* Barra de XP e Rank */}
+          <div className="flex gap-8 justify-between">
+            {/* Barra de XP */}
+            <div className="flex-1 max-w-xs group relative">
+              <div className="flex flex-col justify-between text-[14px] font-black uppercase mb-1 tracking-tighter">
+                <span className="text-slate-500">Experiência </span>
+                <span className="text-violet-400">
+                  {xpAtual} / {xpProximoNivel} XP
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                <div
+                  className="h-full bg-violet-500 transition-all duration-500 shadow-[0_0_8px_rgba(139,92,246,0.4)]"
+                  style={{ width: `${Math.min(100, (xpAtual / xpProximoNivel) * 100)}%` }}
+                />
+              </div>
+              {aptoParaLevelUp && (
+                <span className="absolute -top-1 -right-1 flex h-8 w-8 justify-center items-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 pointer-events-none"></span>
+                  <button
+                    onClick={() => {
+                      atualizarNivel(nivelAtual + 1);
+                      alert('Parabéns por Alcançar o nível ' + (nivelAtual + 1));
+                    }}
+                    className="hover:text-[#48bb78] transition-colors text-violet-500"
+                  >
+                    <ArrowUpCircleIcon className="w-8 h-8" />
+                  </button>
+                </span>
+              )}
+            </div>
+            {/* Barra de Rank */}
+            <div className="flex-1 max-w-xs group relative">
+              <div className="flex flex-col justify-between text-[14px] font-black uppercase mb-1 tracking-tighter">
+                <span className="text-slate-500">Méritos </span>
+                <span className="text-violet-400">
+                  {meritoAtual} / {meritoProximoNivel}
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                <div
+                  className="h-full bg-violet-500 transition-all duration-500 shadow-[0_0_8px_rgba(139,92,246,0.4)]"
+                  style={{ width: `${Math.min(100, (meritoAtual / meritoProximoNivel) * 100)}%` }}
+                />
+              </div>
+              {aptoParaRankUp && (
+                <span className="absolute -top-1 -right-1 flex h-8 w-8 justify-center items-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 pointer-events-none"></span>
+                  <button
+                    onClick={() => {
+                      atualizarRank(rankAtual + 1);
+                      alert('Parabéns por Alcançar o rank ' + MAPEAMENTO_RANKS[rankAtual + 1]);
+                    }}
+                    className="hover:text-[#48bb78] transition-colors text-violet-500"
+                  >
+                    <ArrowUpCircleIcon className="w-8 h-8" />
+                  </button>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Conteúdo Principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-4">
         {/* COLUNA ESQUERDA */}
         <div className="lg:col-span-4 space-y-3">
-          {/* Barra de XP */}
-          <div className="flex-1 max-w-xs group relative">
-            <div className="flex flex-col justify-between text-[14px] font-black uppercase mb-1 tracking-tighter">
-              <span className="text-slate-500">Experiência </span>
-              <span className="text-violet-400">
-                {xpAtual} / {xpProximoNivel} XP
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
-              <div
-                className="h-full bg-violet-500 transition-all duration-500 shadow-[0_0_8px_rgba(139,92,246,0.4)]"
-                style={{ width: `${Math.min(100, (xpAtual / xpProximoNivel) * 100)}%` }}
-              />
-            </div>
-            {aptoParaLevelUp && (
-              <span className="absolute -top-1 -right-1 flex h-8 w-8 justify-center items-center">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 pointer-events-none"></span>
-                <button
-                  onClick={() => alert("LevelUP")}
-                  className="hover:text-[#48bb78] transition-colors text-violet-500"
-                ><ArrowUpCircleIcon className="w-8 h-8" /></button>
-              </span>
-            )}
-          </div>
-          {/* Barra de Rank */}
-          <div className="flex-1 max-w-xs group relative">
-            <div className="flex flex-col justify-between text-[14px] font-black uppercase mb-1 tracking-tighter">
-              <span className="text-slate-500">Méritos </span>
-              <span className="text-violet-400">
-                {meritoAtual} / {meritoProximoNivel}
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
-              <div
-                className="h-full bg-violet-500 transition-all duration-500 shadow-[0_0_8px_rgba(139,92,246,0.4)]"
-                style={{ width: `${Math.min(100, (meritoAtual / meritoProximoNivel) * 100)}%` }}
-              />
-            </div>
-            {aptoParaRankUp && (
-              <span className="absolute -top-1 -right-1 flex h-8 w-8 justify-center items-center">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75 pointer-events-none"></span>
-                <button
-                  onClick={() => alert("LevelUP")}
-                  className="hover:text-[#48bb78] transition-colors text-violet-500"
-                ><ArrowUpCircleIcon className="w-8 h-8" /></button>
-              </span>
-            )}
-          </div>
           {/* Moedas */}
           <div className="card-pagina px-4">
             <Moedas dados={personagem?.character_details?.moedas} onUpdate={atualizarMoedas} />
           </div>
           {/* Talentos */}
-          <div className="bg-slate-950/40 border border-slate-800/50 rounded-xl overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-slate-800/50 bg-slate-900/50 flex justify-between items-center">
-              <h2 className="titulo-secao-rpg flex items-center gap-2">
+          <div className="secao-rpg">
+            <div className="secao-header-rpg">
+              <h2 className="titulo-secao-rpg">
                 <span className="text-violet-500 animate-pulse text-lg">◈</span> Talentos
+                <span className="text-[10px]">
+                  [ {talentosAtivos?.length} / {nivelAtual + 1} ]{' '}
+                </span>
               </h2>
               <button
                 onClick={() => setIsModalTalentosAberto(true)}
-                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-violet-400 text-[9px] font-black uppercase rounded-md border border-violet-900/30 transition-all"
+                className="btn-secundario-rpg px-2 py-1 text-[9px]"
               >
                 Gerenciar
               </button>
             </div>
-            <div className="divide-y divide-slate-800/50 text-sm text-slate-200 font-medium tracking-tight p-3">
-              {talentosHabilitados?.map(item => (
-                <div className='text-[12px]'
-                  key={item.talento.feat_id}>{item.talento.feat_name} 
-                  <span className='text-[9px] italic font-black text-slate-600 tracking-tight'><br/>{item.talento.feat_description}</span>              
+            <div className=" text-sm text-slate-200 font-medium tracking-tight px-5 leading-none">
+              {talentosAtivos?.map((item) => (
+                <div className="text-[12px] my-2" key={item.talento.feat_id}>
+                  {item.talento.feat_name}
+                  <span className="text-[9px] italic font-black text-slate-600 tracking-tight">
+                    <br />
+                    {item.talento.feat_description}
+                  </span>
                 </div>
               ))}
             </div>
-            {(!talentosHabilitados ||
-              talentosHabilitados?.length === 0) && (
+            {(!talentosAtivos || talentosAtivos?.length === 0) && (
               <div className="text-[10px] text-slate-800 italic p-2 text-center">
                 Nenhum Talento Habilitado
               </div>
             )}
           </div>
           {/* Atributos */}
-          <div className="bg-slate-950/40 border border-slate-800/50 rounded-xl overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-slate-800/50 bg-slate-900/50 flex justify-between items-center">
-              <h2 className="titulo-secao-rpg items-center gap-2">
+          <div className="secao-rpg">
+            <div className="secao-header-rpg">
+              <h2 className="titulo-secao-rpg">
                 <span className="text-violet-500 animate-pulse text-lg">◈</span> Atributos
               </h2>
               <button
                 onClick={() => setIsModalAtributosAberto(true)}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-violet-400 text-[10px] font-black uppercase rounded-md border border-violet-900/30 transition-all mb-2 ml-2"
+                className="btn-secundario-rpg mb-2 ml-2"
               >
-                <span className="text-[10px] font-bold uppercase tracking-tighter">Gerenciar</span>
+                Gerenciar
               </button>
             </div>
-            <div className='p-4'><Atributos dados={personagem?.character_abilities?.atributos} /></div>
-            
+            <div className="p-4">
+              <Atributos dados={personagem?.character_abilities?.atributos} />
+            </div>
           </div>
           {/* Reservas */}
-          <div className="bg-slate-950/40 border border-slate-800/50 rounded-xl overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-slate-800/50 bg-slate-900/50 flex justify-between items-center">
-              <h2 className="titulo-secao-rpg items-center gap-2">
+          <div className="secao-rpg">
+            <div className="secao-header-rpg">
+              <h2 className="titulo-secao-rpg">
                 <span className="text-violet-500 animate-pulse text-lg">◈</span> Reservas
               </h2>
             </div>
-            <div className='p-6'>
-            <Reservas
-              dados={personagem?.character_details?.reservas}
-              onUpdate={atualizarReservas}
-            /></div>
+            <div className="p-6">
+              <Reservas
+                dados={personagem?.character_details?.reservas}
+                onUpdate={atualizarReservas}
+              />
+            </div>
           </div>
         </div>
         {/* COLUNA CENTRAL/DIREITA */}
@@ -653,7 +834,7 @@ export default function FichaPersonagem() {
             </div>
           </div>
           {/* Perícias (Grid de duas colunas) */}
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
             <h2 className="titulo-secao-rpg mb-4">
               <span className="text-violet-500 animate-pulse text-lg">◈</span> Perícias
             </h2>
@@ -684,22 +865,19 @@ export default function FichaPersonagem() {
           </div>
           {/* Container Principal de Equipamentos */}
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="titulo-secao-rpg flex items-center gap-2">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="titulo-secao-rpg">
                 <span className="text-violet-500 animate-pulse text-lg">◈</span> Equipamentos
               </h2>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-violet-400 text-[10px] font-black uppercase rounded-md border border-violet-900/30 transition-all">
-                  Gerenciar
-                </button>
+                <button className="btn-secundario-rpg">Gerenciar</button>
                 <button className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-black uppercase rounded-md shadow-lg shadow-violet-900/20 transition-all">
                   Mochila ({personagem?.character_equipment?.mochila?.slotsOcupados || 0}/
                   {personagem?.character_equipment?.mochila?.slotsTotais || 0})
                 </button>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
               <div className="space-y-4">
                 <SlotSimples label="Roupa" valor={personagem?.character_equipment?.roupa} />
                 <SlotSimples
@@ -776,9 +954,39 @@ export default function FichaPersonagem() {
                 )}
               </div>
             </div>
+            <div>
+              <div className="flex h-3 grid-cols-1 md:grid-cols-2 gap-x-2 gap-y- justify-self-auto rounded-xl">
+                <div
+                  title="Slot de Alma"
+                  className={`w-2 rounded-sm border bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)] border-cyan-400`}
+                />
+                <span className="block text-[8px] font-black uppercase text-slate-400">
+                  Slot de Alma
+                </span>
+                <div
+                  title="Sintonização"
+                  className={`w-2 rounded-sm border bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)] border-violet-400`}
+                />
+                <span className="block text-[8px] font-black uppercase text-slate-400">
+                  Sintonização
+                </span>
+              </div>
+            </div>
+          </div>
+          {/* Maestrias */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+            <h2 className="titulo-secao-rpg mb-4">
+              <span className="text-violet-500 animate-pulse text-lg">◈</span> Maestrias
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {maestrias?.map((m, index) => (
+                <MaestriaCard key={index} dados={m} />
+              ))}
+            </div>
           </div>
         </div>
       </div>
+      {/* Telas */}
       <ModalAtributos
         isOpen={isModalAtributosAberto}
         onClose={() => setIsModalAtributosAberto(false)}
@@ -791,7 +999,22 @@ export default function FichaPersonagem() {
         isOpen={isModalTalentosAberto}
         onClose={() => setIsModalTalentosAberto(false)}
         talentos={personagem?.talento || []}
+        maxEnabled={nivelAtual + 1}
         onToggle={alternarTalento}
+      />
+      <ModalTitulos
+        isOpen={isModalTitulosAberto}
+        onClose={() => setIsModalTitulosAberto(false)}
+        titulos={
+          personagem?.character_details?.titulos?.map((t, index) => ({
+            ...t,
+            identificador: index + 1, // Passamos o índice como ID para o backend
+            ativo: t.ativo !== false,
+            principal: t.principal !== false,
+          })) || []
+        }
+        maxEnabled={3}
+        onToggle={alternarTitulos}
       />
     </div>
   );

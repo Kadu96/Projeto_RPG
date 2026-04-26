@@ -46,7 +46,40 @@
   .card-pagina {
     @apply flex justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl mb-5 shadow-xl
   }
-  
+
+  /* Estilos para Formulários */
+  .input-rpg {
+    @apply w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-white 
+           focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all;
+  }
+
+  .label-rpg {
+    @apply text-xs font-bold uppercase text-slate-500 ml-1;
+  }
+
+  /* Estrutura de Seções da Ficha */
+  .secao-rpg {
+    @apply bg-slate-950/40 border border-slate-800/50 rounded-xl overflow-hidden;
+  }
+
+  .secao-header-rpg {
+    @apply px-4 py-2.5 border-b border-slate-800/50 bg-slate-900/50 flex justify-between items-center;
+  }
+
+  .titulo-secao-rpg {
+    @apply text-sm font-black uppercase tracking-widest text-white flex items-center gap-2;
+  }
+
+  /* Botões Utilitários */
+  .btn-secundario-rpg {
+    @apply px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-violet-400 text-[10px] 
+           font-black uppercase rounded-md border border-violet-900/30 transition-all;
+  }
+
+  .btn-header-rpg {
+    @apply px-3 py-1.5 text-violet-400 text-[10px] font-black uppercase transition-all;
+  }
+
   .titulo-pagina {
     @apply text-4xl font-black uppercase tracking-tighter text-white;
   }

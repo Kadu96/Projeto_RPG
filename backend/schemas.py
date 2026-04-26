@@ -31,8 +31,8 @@ class UserLogin(BaseModel):
 class CharacterBase(BaseModel):
     character_name: str
     race_id: int
-    background_id: int
     adventure_id: Optional[int] = None
+    url_image: Optional[str] = None
     # Definimos como Dict para validar os campos JSONB
     character_info: Dict[str, Any] = Field(..., example={"age": 30, "height": 1.79})
     character_details: Optional[Dict[str, Any]] = None
@@ -45,6 +45,7 @@ class CharacterCreate(CharacterBase):
 class CharacterUpdate(BaseModel):
     # Todos os campos opcionais para permitir atualização parcial (PATCH)
     character_name: Optional[str] = None
+    url_image: Optional[str] = None
     character_info: Optional[Dict[str, Any]] = None
     character_details: Optional[Dict[str, Any]] = None
     character_abilities: Optional[Dict[str, Any]] = None
@@ -70,12 +71,10 @@ class CharacterResponse(CharacterBase):
     character_id: int
     character_uuid: UUID
     race_name: Optional[str] = None
-    background_name: Optional[str] = None
     adventure_name: Optional[str] = None
     user_id: int
     is_active: bool
     talento: Optional[List[AssFeatResponse]] = [] # Corresponde ao relationship no models.py
-
     class Config:
         from_attributes = True
 
@@ -87,23 +86,6 @@ class RaceResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# --- SCHEMAS DE BACKGROUND (ANTECEDENTES) ---
-
-class BackgroundBase(BaseModel):
-    background_name: str
-    background_description: str
-    background_traits: Dict[str, Any] # Aqui entram os bônus de moedas e perícias que o seu serviço usa
-
-class BackgroundCreate(BackgroundBase):
-    pass
-
-class BackgroundResponse(BackgroundBase):
-    background_id: int
-    is_active: bool
-
-    class Config:
-        from_attributes = True
-        
 # --- CAMPANHAS ---
 class AdventureBase(BaseModel):
     adventure_name: str

@@ -1,14 +1,18 @@
+import os
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import jwt
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
+
 
 # Configuração do algoritmo de criptografia
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# CHAVE_MESTRA: No mundo real, use algo secreto e vindo de um arquivo .env
-SECRET_KEY = "DndClassless123!"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # Token dura 1 dia
 
 def gerar_senha_hash(senha: str):  
     return pwd_context.hash(senha)

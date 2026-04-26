@@ -5,20 +5,12 @@ import schemas
 
 
 def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_id: int):
-    # Busca Raça e Antecedente (usando os IDs do seu novo banco)
+    # Busca Raça (usando os IDs do seu novo banco)
     raca = db.query(models.Race).filter(models.Race.race_id == char_in.race_id).first()
-    antecedente = (
-        db.query(models.Background)
-        .filter(models.Background.background_id == char_in.background_id)
-        .first()
-    )
 
     # Validação de Segurança: Garante que os IDs existam antes de prosseguir
     if not raca:
         raise ValueError(f"Raça com ID {char_in.race_id} não encontrada.")
-    
-    if not antecedente:
-        raise ValueError(f"Antecedente com ID {char_in.background_id} não encontrado.")
 
     # --- Lógica de Cálculos (Mapeamento, Atributos, Moedas) ---
     mapeamento = {
@@ -88,34 +80,11 @@ def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_i
         0,
     )
 
-    recursos_bg = (
-        antecedente.background_traits.get("recurso", []) if antecedente else []
-    )
-    moedas["ouro"] += next((
-        item["valor"] for item in recursos_bg if item.get("tipo") == "moedaOuro"
-    ), 0)
-    moedas["prata"] += next((
-        item["valor"] for item in recursos_bg if item.get("tipo") == "moedaPrata"
-    ), 0)
-    moedas["cobre"] += next((
-        item["valor"] for item in recursos_bg if item.get("tipo") == "moedaCobre"
-    ), 0)
-
     if raca and "bonus_attr" in raca.race_traits:
         for item in raca.race_traits["bonus_attr"]:
             attr_nome = mapeamento.get(item["atributo"])
             if attr_nome:
                 atributos[attr_nome] += item["valor"]
-
-    if antecedente and "maestria" in antecedente.background_traits:
-        for item in antecedente.background_traits["maestria"]:
-            tipo = item.get("tipo", "")
-            if tipo == "pericia" and not item.get("selecionavel"):
-                valor_maestria = item.get("maestria")
-                bonus = item.get("valor", 0)
-
-                if valor_maestria in pericias:
-                    pericias[valor_maestria] += bonus
 
     # --- Cálculos de Modificadores ---
     mod_for = (atributos["forca"] - 10) // 2
@@ -139,6 +108,7 @@ def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_i
         "merito": 0,
         "rank": 0,
         "titulos": [],
+        "maestrias": [],
         "moedas": moedas,
         "deslocamento": raca.race_traits.get("deslocamento", "9") if raca else "9",
         "reservas": {
@@ -170,7 +140,6 @@ def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_i
         character_uuid=str(uuid.uuid4()),
         user_id=user_id,
         race_id=char_in.race_id,
-        background_id=char_in.background_id,
         adventure_id=char_in.adventure_id,
         character_name=char_in.character_name,
         character_info=character_info,

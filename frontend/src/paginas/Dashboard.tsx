@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL, getAuthHeaders, handleAuthError } from "../shared";
 
 type Personagem = {
   character_uuid?: string;
   character_name?: string;
   character_details?: {
     nivel?: number;
-    titulos?: [
-      {
-        nome: string;
-        principal: boolean;
-      },
-    ];
+    titulos?: {
+      nome: string;
+      principal: boolean;
+      is_enabled: boolean;
+    }[];
   };
 };
 
@@ -25,25 +25,17 @@ export default function Dashboard() {
   useEffect(() => {
     // Função para buscar os personagens na API
     const buscarPersonagens = async () => {
-      const token = sessionStorage.getItem("token");
-      console.log("Token enviado:", token);
       try {
-        const response = await fetch("http://127.0.0.1:8000/personagens", {
+        const response = await fetch(`${API_BASE_URL}/personagens`, {
           method: "GET",
-          headers: {
-            // O espaço entre 'Bearer' e o token é obrigatório
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers: getAuthHeaders(),
         });
 
         if (response.ok) {
           const data = await response.json();
           setPersonagensDisponiveis(data);
-        } else if (response.status === 401) {
-          // Token expirado ou inválido
-          sessionStorage.removeItem("token");
-          window.location.href = "/login";
+        } else {
+          handleAuthError(response.status);
         }
       } catch (error) {
         console.error("Erro ao carregar personagens:", error);

@@ -1,3 +1,5 @@
+import { calcularModificador } from "../shared";
+
 interface AtributosProps {
   dados?: {
     forca?: number | undefined;
@@ -12,8 +14,6 @@ interface AtributosProps {
 export default function Atributos({ dados }: AtributosProps) {
   // Se os dados ainda não carregaram, mostramos um estado de carregamento
   if (!dados) return <div className="text-slate-500">Carregando atributos...</div>;
-
-  const calcularModificador = (valor: number) => Math.floor((valor - 10) / 2);
 
   return (
     <div className="grid grid-cols-2 gap-4">
