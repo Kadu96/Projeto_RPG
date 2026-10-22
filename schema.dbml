@@ -1,0 +1,465 @@
+enum enum_afinidade {
+	fogo
+	agua
+	terra
+	ar
+	profano
+	sagrado
+	psique
+	espacial
+}
+
+enum enum_atributo {
+	FOR
+	DES
+	CON
+	INT
+	SAB
+	CAR
+}
+
+enum enum_categoria {
+	escudo
+	acessorio
+	roupa
+	armadura_leve
+	armadura_media
+	armadura_pesada
+	arma_simples
+	arma_marcial
+	"poçao"
+	material
+	miscelanea
+	foco_arcano
+	municao
+	simbolo_sagrado
+	ferramenta
+}
+
+enum enum_tipo_dano {
+	PERF
+	CONC
+	CORT
+}
+
+enum enum_moeda {
+	po
+	pp
+	pc
+}
+
+enum enum_grau {
+	rustico
+	refinado
+	eximio
+	transcendental
+	lendario
+	mitico
+	ascendido
+}
+
+enum enum_classe {
+	"aço"
+	terra
+	espiritual
+}
+
+enum enum_raridade {
+	comum
+	raro
+	lendario
+	mitico
+	incomum
+}
+
+enum enum_nivel_magia {
+	basico
+	iniciante
+	intermediario
+	superior
+	epico
+}
+
+enum enum_distancia_magia {
+	distancia
+	toque
+	area
+	auto
+}
+
+enum enum_tipo_tecnica {
+	marcial
+	magica
+	psiquica
+	social
+}
+
+enum enum_propriedade {
+	acuidade
+	alcance
+	arremesso
+	duas_maos
+	especial
+	leve
+	municao
+	pesada
+	recarga
+	versatil
+}
+
+enum enum_slot_equip {
+	cintura
+	costas
+	Peitoral
+	Acessorio
+	Armadura
+	Roupa
+}
+
+Table usuario [headercolor: #175e7a] {
+	id_usuario integer [ pk, increment, not null, unique ]
+	uuid_usuario varchar(255) [ not null, unique ]
+	login varchar(50) [ not null, unique ]
+	email_usuario varchar(50) [ not null, unique ]
+	senha_usuario varchar(255) [ not null ]
+	nome_usuario varchar(50) [ not null ]
+	criado_em timestamp [ not null ]
+	usuario_dm boolean [ not null, default: False ]
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_usuario) [ name: 'usuario_index_0', unique ]
+		(email_usuario) [ name: 'usuario_index_1', unique ]
+		(uuid_usuario) [ name: 'usuario_index_2', unique ]
+		(login) [ name: 'usuario_index_3', unique ]
+	}
+}
+
+Table campanha [headercolor: #175e7a] {
+	id_campanha integer [ pk, increment, not null ]
+	nome_campanha varchar(100) [ not null ]
+	id_usuario_dm integer [ not null ]
+	criado_em timestamp [ not null ]
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_campanha) [ name: 'campanha_index_0' ]
+	}
+}
+
+Table talento [headercolor: #175e7a] {
+	id_talento integer [ pk, increment, not null ]
+	nome_talento varchar(50) [ not null ]
+	descricao_talento varchar(255) [ not null ]
+	nivel_minimo integer [ not null, default: 1 ]
+	atributo_requerido enum_atributo
+	atributo_minimo integer
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_talento) [ name: 'talento_index_0' ]
+	}
+}
+
+Table equipamento [headercolor: #175e7a] {
+	id_equipamento integer [ pk, increment, not null ]
+	nome_equipamento varchar(50) [ not null ]
+	descricao_equipamento varchar(255) [ not null ]
+	categoria enum_categoria [ not null ]
+	peso numeric(3,2) [ not null ]
+	tamanho integer [ not null, default: 1 ]
+	moeda_preco enum_moeda [ not null ]
+	valor_preco integer [ not null ]
+	nivel_minimo integer [ not null, default: 1 ]
+	grau enum_grau [ not null ]
+	classe enum_classe [ not null ]
+	raridade enum_raridade [ not null ]
+	maestria_tipo varchar(50)
+	atributo_requerido enum_atributo
+	atributo_minimo integer
+	defesa integer
+	propriedades enum_propriedade
+	consumivel boolean [ not null, default: False ]
+	unico boolean [ not null, default: False ]
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_equipamento) [ name: 'equipamento_index_0' ]
+		(categoria) [ name: 'equipamento_index_1' ]
+		(grau) [ name: 'equipamento_index_2' ]
+		(ativo) [ name: 'equipamento_index_3' ]
+		(classe) [ name: 'equipamento_index_4' ]
+		(raridade) [ name: 'equipamento_index_5' ]
+	}
+}
+
+Table compendium [headercolor: #175e7a] {
+	id_compendium integer [ pk, increment, not null ]
+	nome_compendium varchar(50) [ not null ]
+	descricao_compendium varchar(255) [ not null ]
+	afinidade enum_afinidade
+	nivel enum_nivel_magia [ not null ]
+	custo_mana integer [ not null, default: 0 ]
+	alcance_tipo enum_distancia_magia [ not null ]
+	alcance integer
+	conjuracao varchar(50) [ not null ]
+	duracao integer [ not null ]
+	concentracao boolean [ not null, default: False ]
+	tier_maestria_minima integer [ not null ]
+	frag_maestria_minima integer [ not null ]
+	inteligencia_minima integer [ not null, default: 10 ]
+	requer_arcanismo boolean [ not null, default: False ]
+
+	indexes {
+		(id_compendium) [ name: 'compendium_magia_index_0' ]
+		(afinidade) [ name: 'compendium_magia_index_1' ]
+	}
+}
+
+Table habilidade [headercolor: #175e7a] {
+	id_habilidade integer [ pk, increment, not null ]
+	nome_habilidade varchar(50) [ not null ]
+	descricao_habilidade varchar(255) [ not null ]
+	tipo_tecnica enum_tipo_tecnica [ not null ]
+	nivel_minimo integer [ not null, default: 1 ]
+	rank_minimo integer [ not null, default: 1 ]
+	tipo_maestria_req varchar(255)
+	atributo_requerido enum_atributo
+	atributo_minimo integer
+	mana_custo integer
+	vigor_custo integer
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_habilidade) [ name: 'habilidade_index_0' ]
+		(tipo_tecnica) [ name: 'habilidade_index_1' ]
+	}
+}
+
+Table raca [headercolor: #175e7a] {
+	id_raca integer [ pk, increment, not null ]
+	nome_raca varchar(50) [ not null ]
+	descricao_raca varchar(255) [ not null ]
+	base_forca integer [ not null, default: 0 ]
+	base_destreza integer [ not null, default: 0 ]
+	base_constituicao integer [ not null, default: 0 ]
+	base_inteligencia integer [ not null, default: 0 ]
+	base_sabedoria integer [ not null, default: 0 ]
+	base_carisma integer [ not null, default: 0 ]
+	idioma_racial varchar(255) [ not null ]
+	caracteristica1 varchar(50)
+	caracteristica1_descricao varchar(255)
+	caracteristica2 varchar(50)
+	caracteristica2_descricao varchar(255)
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_raca) [ name: 'raca_index_0' ]
+	}
+}
+
+Table personagem [headercolor: #175e7a] {
+	id_personagem integer [ pk, increment, not null ]
+	uuid_personagem varchar(255) [ not null ]
+	id_usuario integer [ not null ]
+	id_campanha integer [ not null ]
+	id_raca integer [ not null ]
+	nome_personagem varchar(100) [ not null, unique ]
+	idade_personagem integer [ not null ]
+	sexo_personagem varchar(1) [ not null ]
+	altura_personagem numeric(3,2) [ not null ]
+	peso_personagem numeric(3,2) [ not null ]
+	alinhamento_personagem varchar(50) [ not null ]
+	idiomas varchar(255) [ not null ]
+	afinidade_primaria enum_afinidade [ not null ]
+	nivel_personagem integer [ not null, default: 1 ]
+	exp_atual integer [ not null, default: 0 ]
+	merito_atual integer [ not null, default: 0 ]
+	pontos_evolucao integer [ not null, default: 0 ]
+	atributo_for integer [ not null, default: 8 ]
+	atributo_des integer [ not null, default: 8 ]
+	atributo_con integer [ not null, default: 8 ]
+	atributo_int integer [ not null, default: 8 ]
+	atributo_sab integer [ not null, default: 8 ]
+	atributo_car integer [ not null, default: 8 ]
+	criado_em timestamp [ not null ]
+	alterado_em timestamp
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_personagem, id_campanha) [ name: 'personagem_index_0' ]
+		(id_personagem, id_usuario) [ name: 'personagem_index_1' ]
+		(uuid_personagem) [ name: 'personagem_index_2', unique ]
+	}
+}
+
+Table inventario [headercolor: #175e7a] {
+	id_inventario integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	id_equipamento integer [ not null ]
+	quantidade integer [ not null ]
+	qtd_max integer [ not null, default: 1 ]
+
+	indexes {
+		(id_personagem, id_equipamento) [ name: 'inventario_index_0', unique ]
+		(id_inventario) [ name: 'inventario_index_1' ]
+		(equipado) [ name: 'inventario_index_2' ]
+	}
+}
+
+Table grimorio [headercolor: #175e7a] {
+	id_grimorio integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	id_compendium integer [ not null ]
+
+	indexes {
+		(id_grimorio) [ name: 'grimorio_index_0' ]
+		(id_personagem, id_compendium) [ name: 'grimorio_index_1', unique ]
+	}
+}
+
+Table personagem_talento [headercolor: #175e7a] {
+	id_personagem_talento integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	id_talento integer [ not null ]
+	habilitado boolean [ not null, default: False ]
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_personagem_talento) [ name: 'personagem_talento_index_0' ]
+		(id_personagem, id_talento) [ name: 'personagem_talento_index_1', unique ]
+	}
+}
+
+Table personagem_titulo [headercolor: #175e7a] {
+	id_personagem_titulo integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	nome_titulo varchar(50) [ not null ]
+	descricao_titulo varchar(255) [ not null ]
+	titulo_principal boolean [ not null, default: False ]
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_personagem, nome_titulo) [ name: 'personagem_titulo_index_0', unique ]
+	}
+}
+
+Table personagem_habilidade [headercolor: #175e7a] {
+	id_personagem_habilidade integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	id_habilidade integer [ not null ]
+
+	indexes {
+		(id_personagem_habilidade) [ name: 'personagem_habilidade_index_0' ]
+		(id_personagem, id_habilidade) [ name: 'personagem_habilidade_index_1', unique ]
+	}
+}
+
+Table personagem_maestria [headercolor: #175e7a] {
+	id_personagem_maestria integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	nome_personagem_maestria varchar(255) [ not null ]
+	descricao_personagem_maestria varchar(255) [ not null ]
+	tier integer [ not null ]
+	fragmento integer [ not null ]
+
+	indexes {
+		(id_personagem_maestria) [ name: 'personagem_maestria_index_0' ]
+		(id_personagem, nome_personagem_maestria) [ name: 'personagem_maestria_index_1', unique ]
+	}
+}
+
+Table personagem_pericia [headercolor: #175e7a] {
+	id_personagem_pericia integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	pericia varchar(255) [ not null ]
+	nivel integer [ not null ]
+	fragmentos integer [ not null ]
+
+	indexes {
+		(id_personagem_pericia) [ name: 'personagem_pericia_index_0' ]
+		(id_personagem, pericia) [ name: 'personagem_pericia_index_1', unique ]
+	}
+}
+
+Table equipamento_equipado [headercolor: #175e7a] {
+	id_inventario integer [ pk, increment, not null ]
+	id_personagem integer [ not null ]
+	id_equipamento integer [ not null ]
+	slot_equip enum_slot_equip [ not null ]
+	ativo boolean [ not null, default: True ]
+
+	indexes {
+		(id_personagem, id_equipamento) [ name: 'inventario_index_0', unique ]
+		(id_inventario) [ name: 'inventario_index_1' ]
+		(equipado) [ name: 'inventario_index_2' ]
+	}
+}
+
+Ref fk_personagem_id_usuario_usuario {
+	personagem.id_usuario < usuario.id_usuario [ delete: cascade, update: no action ]
+}
+
+Ref fk_campanha_id_usuario_dm_usuario {
+	campanha.id_usuario_dm < usuario.id_usuario [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_id_campanha_campanha {
+	personagem.id_campanha < campanha.id_campanha [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_talento_id_personagem_personagem {
+	personagem_talento.id_personagem < personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_talento_id_talento_talento {
+	personagem_talento.id_talento < talento.id_talento [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_titulo_id_personagem_personagem {
+	personagem_titulo.id_personagem < personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_inventario_id_personagem_personagem {
+	inventario.id_personagem < personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_inventario_id_equipamento_equipamento {
+	inventario.id_equipamento < equipamento.id_equipamento [ delete: cascade, update: no action ]
+}
+
+Ref fk_grimorio_id_personagem_personagem {
+	grimorio.id_personagem < personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_grimorio_id_compendium_compendium {
+	grimorio.id_compendium < compendium.id_compendium [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_habilidade_id_habilidade_habilidade {
+	personagem_habilidade.id_habilidade < habilidade.id_habilidade [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_habilidade_id_personagem_personagem {
+	personagem_habilidade.id_personagem < personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_maestria_id_personagem_maestria_personagem {
+	personagem_maestria.id_personagem_maestria - personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_pericia_id_personagem_personagem {
+	personagem_pericia.id_personagem < personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_personagem_id_raca_raca {
+	personagem.id_raca < raca.id_raca [ delete: cascade, update: no action ]
+}
+
+Ref fk_equipamento_equipado_id_personagem_personagem {
+	equipamento_equipado.id_personagem > personagem.id_personagem [ delete: cascade, update: no action ]
+}
+
+Ref fk_equipamento_equipado_id_equipamento_equipamento {
+	equipamento_equipado.id_equipamento > equipamento.id_equipamento [ delete: cascade, update: no action ]
+}
