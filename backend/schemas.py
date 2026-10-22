@@ -1,289 +1,300 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, Any, List
-from uuid import UUID
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import List, Optional, Dict, Union, Any
 from datetime import datetime
 from enum import Enum
+from decimal import Decimal
 
-# ==========================================
-# 0. ENUMS PARA VALIDAÇÃO DE ENTRADA/SAÍDA
-# ==========================================
+# --- ENUMS (Espelhando exatamente o models.py) ---
 
-class EquipmentCategory(str, Enum):
-    weapon = 'weapon'
-    armor = 'armor'
-    shield = 'shield'
-    consumable = 'consumable'
-    tool = 'tool'
-    adventuring_gear = 'adventuring_gear'
-    quest_item = 'quest_item'
+class AfinidadeEnum(str, Enum):
+    fogo = "fogo"
+    agua = "agua"
+    terra = "terra"
+    ar = "ar"
+    profano = "profano"
+    sagrado = "sagrado"
+    psique = "psique"
+    espacial = "espacial"
 
-class EquipmentSlotType(str, Enum):
-    head = 'head'
-    torso = 'torso'
-    hands = 'hands'
-    legs = 'legs'
-    feet = 'feet'
-    main_hand = 'main_hand'
-    off_hand = 'off_hand'
-    two_handed = 'two_handed'
-    neck = 'neck'
-    ring = 'ring'
-    none = 'none'
+class AtributoEnum(str, Enum):
+    FOR = "FOR"
+    DES = "DES"
+    CON = "CON"
+    INT = "INT"
+    SAB = "SAB"
+    CAR = "CAR"
 
-class MaestryCategory(str, Enum):
-    elemental = 'elemental'
-    weapon = 'weapon'
-    armor = 'armor'
-    tool = 'tool'
-    utility = 'utility'
+class CategoriaEnum(str, Enum):
+    escudo = "escudo"
+    acessorio = "acessorio"
+    roupa = "roupa"
+    armadura_leve = "armadura_leve"
+    armadura_media = "armadura_media"
+    armadura_pesada = "armadura_pesada"
+    arma_simples = "arma_simples"
+    arma_marcial = "arma_marcial"
+    poçao = "poçao"
+    material = "material"
+    miscelanea = "miscelanea"
+    foco_arcano = "foco_arcano"
+    municao = "municao"
+    simbolo_sagrado = "simbolo_sagrado"
+    ferramenta = "ferramenta"
 
-class MaestryType(str, Enum):
-    base = 'base'
-    advanced = 'advanced'
-    superior = 'superior'
+class MoedaEnum(str, Enum):
+    po = "po"
+    pp = "pp"
+    pc = "pc"
 
-class SpellAffinity(str, Enum):
-    aqua = 'aqua'
-    ignis = 'ignis'
-    terra = 'terra'
-    ventus = 'ventus'
-    lux = 'lux'
-    umbra = 'umbra'
-    force = 'force'
-    none = 'none'
+class GrauEnum(str, Enum):
+    rustico = "rustico"
+    refinado = "refinado"
+    eximio = "eximio"
+    transcendental = "transcendental"
+    lendario = "lendario"
+    mitico = "mitico"
+    ascendido = "ascendido"
 
-class SpellRangeType(str, Enum):
-    self = 'self'
-    touch = 'touch'
-    ranged = 'ranged'
-    special = 'special'
+class ClasseEnum(str, Enum):
+    aço = "aço"
+    terra = "terra"
+    espiritual = "espiritual"
 
-class SpellType(str, Enum):
-    arcane = 'arcane'
-    divine = 'divine'
-    natural = 'natural'
-    profane = 'profane'
-    unique = 'unique'
+class RaridadeEnum(str, Enum):
+    comum = "comum"
+    raro = "raro"
+    lendario = "lendario"
+    mitico = "mitico"
+    incomum = "incomum"
 
+class NivelMagiaEnum(str, Enum):
+    basico = "basico"
+    iniciante = "iniciante"
+    intermediario = "intermediario"
+    alto = "alto"
+    superior = "superior"
 
-# ==========================================
-# 1. SCHEMAS DE USUÁRIO
-# ==========================================
+class DistanciaMagiaEnum(str, Enum):
+    distancia = "distancia"
+    toque = "toque"
+    area = "area"
+    auto = "auto"
+
+class TipoTecnicaEnum(str, Enum):
+    marcial = "marcial"
+    magica = "magica"
+    psiquica = "psiquica"
+    social = "social"
+
+# --- USER SCHEMAS ---
 
 class UserBase(BaseModel):
-    user_name: str
-    user_login: str
-    user_email: EmailStr
-    is_master: bool = False
+    nome_usuario: str
+    login: str
+    email_usuario: EmailStr
+    usuario_dm: bool = False
 
 class UserCreate(UserBase):
-    user_pass: str  # Senha em texto puro para ser processada/hasheada no backend
-
-class UserResponse(UserBase):
-    user_id: int
-    user_uuid: UUID
-    is_active: bool
-
-    class Config:
-        from_attributes = True
-
+    senha_usuario: str
 
 class UserLogin(BaseModel):
     login_or_email: str
-    user_pass: str
+    senha_usuario: str
 
+class UserResponse(UserBase):
+    id_usuario: int
+    uuid_usuario: str
+    criado_em: datetime
+    ativo: bool
 
-# ==========================================
-# 2. SCHEMAS DE CAMPANHA (ADVENTURES)
-# ==========================================
+    model_config = ConfigDict(from_attributes=True)
 
-class AdventureBase(BaseModel):
-    adventure_name: str
-    adventure_description: Optional[str] = None
-    is_active: bool = True
+# --- ADVENTURE SCHEMAS ---
 
-class AdventureCreate(AdventureBase):
-    adventure_create: datetime = Field(default_factory=datetime.utcnow)
-    user_id_create: int
+class CampanhaBase(BaseModel):
+    nome_campanha: str
 
-class AdventureResponse(AdventureBase):
-    adventure_id: int
-    adventure_create: datetime
-    user_id_create: int
+class CampanhaResponse(CampanhaBase):
+    id_campanha: int
+    id_usuario_dm: int
+    criado_em: datetime
+    ativo: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
+# --- CATALOG SCHEMAS (FEAT, EQUIPMENT, SPELL) ---
 
-# ==========================================
-# 3. SCHEMAS DE TALENTOS (FEATS)
-# ==========================================
+class TalentoResponse(BaseModel):
+    id_talento: int
+    nome_talento: str
+    descricao_talento: str
+    nivel_minimo: int
+    atributo_requerido: Optional[AtributoEnum] = None
+    atributo_minimo: Optional[int] = None
+    ativo: bool
 
-class FeatBase(BaseModel):
-    feat_name: str
-    feat_description: str
-    feat_requisite: Dict[str, Any] = Field(default_factory=dict)
-    is_active: bool = True
+    model_config = ConfigDict(from_attributes=True)
 
-class FeatCreate(FeatBase):
-    pass
+class EquipamentoResponse(BaseModel):
+    id_equipamento: int
+    nome_equipamento: str
+    descricao_equipamento: str
+    categoria: CategoriaEnum
+    peso: Decimal
+    tamanho: int
+    moeda_preco: MoedaEnum
+    valor_preco: int
+    nivel_minimo: int
+    grau: GrauEnum
+    classe: ClasseEnum
+    raridade: RaridadeEnum
+    maestria_tipo: Optional[str] = None
+    atributo_requerido: Optional[AtributoEnum] = None
+    atributo_minimo: Optional[int] = None
+    classe_armadura: Optional[int] = None
+    consumivel: bool
+    unico: bool
+    ativo: bool
 
-class FeatResponse(FeatBase):
-    feat_id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+class CompendiumResponse(BaseModel):
+    id_compendium: int
+    nome_compendium: str
+    descricao_compendium: str
+    afinidade1: Optional[AfinidadeEnum] = None
+    afinidade2: Optional[AfinidadeEnum] = None
+    afinidade3: Optional[AfinidadeEnum] = None
+    nivel: NivelMagiaEnum
+    custo_mana: int
+    alcance_tipo: DistanciaMagiaEnum
+    alcance: Optional[int] = None
+    conjuracao: str
+    duracao: int
+    concentracao: bool
+    tier_maestria_minima: int
+    frag_maestria_minima: int
+    inteligencia_minima: int
+    requer_arcanismo: bool
 
-
-# ==========================================
-# 4. SCHEMAS DE MAESTRIAS (MAESTRIES)
-# ==========================================
-
-class MaestryCatalogBase(BaseModel):
-    maestry_slug: str
-    maestry_name: str
-    category: MaestryCategory
-    m_type: MaestryType = MaestryType.base
-    description: str
-    unlock_requisite: Dict[str, Any] = Field(default_factory=dict)
-    grouped_bonus: Dict[str, Any] = Field(default_factory=dict)
-    is_active: bool = True
-
-class MaestryCatalogResponse(MaestryCatalogBase):
-    class Config:
-        from_attributes = True
-
-
-# ==========================================
-# 5. SCHEMAS DE MAGIAS (SPELLS)
-# ==========================================
-
-class SpellBase(BaseModel):
-    spell_name: str
-    spell_description: str
-    magic_type: SpellType
-    affinity: SpellAffinity = SpellAffinity.none
-    spell_circle: int = 1
-    mana_cost: int = 0
-    activation_time: str = '1 Action'
-    range_type: SpellRangeType = SpellRangeType.ranged
-    range_value: Optional[int] = None
-    duration: str = 'Instantaneous'
-    is_concentration: bool = False
-    req_maestria_tier: int = 0
-    req_maestria_fragments: int = 0
-    spell_requisite: Dict[str, Any] = Field(default_factory=dict)
-    mechanics: Dict[str, Any] = Field(default_factory=dict)
-    is_active: bool = True
-
-class SpellCreate(SpellBase):
-    pass
-
-class SpellResponse(SpellBase):
-    spell_id: int
-
-    class Config:
-        from_attributes = True
-
-
-# ==========================================
-# 6. SCHEMAS DE EQUIPAMENTOS (EQUIPMENTS)
-# ==========================================
-
-class EquipmentBase(BaseModel):
-    equip_name: str
-    equip_description: str
-    category: EquipmentCategory
-    slot_target: EquipmentSlotType = EquipmentSlotType.none
-    equip_size: int = 1
-    equip_weight: float = 0.00
-    equip_requisite: Dict[str, Any] = Field(default_factory=dict)
-    is_unique: bool = False
-    is_active: bool = True
-    maestry_slug: Optional[str] = None
-
-class EquipmentCreate(EquipmentBase):
-    pass
-
-class EquipmentResponse(EquipmentBase):
-    equipment_id: int
-
-    class Config:
-        from_attributes = True
-
-
-# ==========================================
-# 7. SCHEMAS DAS TABELAS ASSOCIATIVAS (VÍNCULOS)
-# ==========================================
-
-class AssCharacterFeatResponse(BaseModel):
-    is_enabled: bool
-    is_active: bool
-    talento: FeatResponse  # Mapeia o relacionamento de `Feat` dentro do relacionamento intermediário
-
-    class Config:
-        from_attributes = True
-
-
-class CharacterEquipmentResponse(BaseModel):
-    character_equipment_id: int
-    quantity: int
-    is_equipped: bool
-    current_durability: Optional[int] = None
-    custom_name: Optional[str] = None
-    equipamento: EquipmentResponse  # Carrega as propriedades estáticas do item
-
-    class Config:
-        from_attributes = True
-
-
-class CharacterMaestryResponse(BaseModel):
-    character_maestry_id: int
-    current_tier: int
-    current_fragments: int
-    maestria_catalogo: MaestryCatalogResponse  # Carrega os dados estáticos da maestria
-
-    class Config:
-        from_attributes = True
-
-
-# ==========================================
-# 8. SCHEMAS DE PERSONAGEM (CHARACTERS)
-# ==========================================
-
-class CharacterBase(BaseModel):
-    character_name: str
-    race_id: int
-    adventure_id: Optional[int] = None
-    url_image: Optional[str] = None
-    # Tipos JSONB perfeitamente representados por dicionários Python estruturados
-    character_info: Dict[str, Any] = Field(..., example={"sex": "M", "age": 25, "description": "..."})
-    character_details: Dict[str, Any] = Field(..., example={"xp": 0, "level": 1, "pv": 12})
-    character_abilities: Dict[str, Any] = Field(..., example={"forca": 10, "destreza": 14})
-
-class CharacterCreate(CharacterBase):
-    user_id: int
-
-class CharacterUpdate(BaseModel):
-    character_name: Optional[str] = None
-    adventure_id: Optional[int] = None
-    url_image: Optional[str] = None
-    character_info: Optional[Dict[str, Any]] = None
-    character_details: Optional[Dict[str, Any]] = None
-    character_abilities: Optional[Dict[str, Any]] = None
-    is_active: Optional[bool] = None
-
-class CharacterResponse(CharacterBase):
-    character_id: int
-    character_uuid: UUID
-    user_id: int
-    is_active: bool
+    model_config = ConfigDict(from_attributes=True)
     
-    # Relações que serão resolvidas via SQLAlchemy ORM Relationships:
-    talentos_vinculados: List[AssCharacterFeatResponse] = []
-    equipamentos_inventario: List[CharacterEquipmentResponse] = []
-    maestrias_personagem: List[CharacterMaestryResponse] = []
-    magias_conhecidas: List[SpellResponse] = []
+class HabilidadeResponse(BaseModel):
+    id_habilidade: int
+    nome_habilidade: str
+    descricao_habilidade: str
+    tipo_tecnica: TipoTecnicaEnum
+    nivel_minimo: int
+    rank_minimo: int
+    tipo_maestria_req1: Optional[str] = None
+    tipo_maestria_req2: Optional[str] = None
+    tipo_maestria_req3: Optional[str] = None
+    tipo_maestria_req4: Optional[str] = None
+    atributo1_requerido: Optional[AtributoEnum] = None
+    atributo2_requerido: Optional[AtributoEnum] = None
+    atributo3_requerido: Optional[AtributoEnum] = None
+    atributo1_minimo: Optional[int] = None
+    atributo2_minimo: Optional[int] = None
+    atributo3_minimo: Optional[int] = None
+    mana_custo: Optional[int] = None
+    vigor_custo: Optional[int] = None
+    ativo: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+    
+class PropriedadeArmaResponse (BaseModel):
+    id_propriedade_arma: int
+    nome_propriedade_arma: str
+    descricao_propriedade_arma: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+# --- CHARACTER SCHEMAS ---
+
+class PersonagemBase (BaseModel):
+    id_usuario: int
+    id_campanha: int
+    nome_personagem: str
+    idade_personagem: int
+    sexo_personagem: str
+    altura_personagem: Decimal
+    peso_personagem: Decimal
+    alinhamento_personagem: str
+    nome_raca: str
+    afinidade_primaria: AfinidadeEnum
+    afinidade_secundaria: AfinidadeEnum
+    nivel_personagem: int = 1
+    xp_atual: int = 0
+    merito_atual: int = 0
+    atributo_for: int
+    atributo_des: int
+    atributo_con: int
+    atributo_int: int
+    atributo_sab: int
+    atributo_car: int
+
+class PersonagemCreate (PersonagemBase):
+    pass
+
+class PersonagemResponse (PersonagemBase):
+    id_personagem: int
+    uuid_personagem: str
+    criado_em: datetime
+    alterado_em: Optional[datetime] = None
+    ativo: bool
+    
+    model_config = ConfigDict(from_attributes=True)
+
+# --- CHARACTER RESPONSE SCHEMAS ---
+
+class PersonagemTalentoResponse(BaseModel):
+    id_personagem_talento: int
+    habilitado: bool
+    id_talento: TalentoResponse
+    model_config = ConfigDict(from_attributes=True)
+
+class InventarioResponse(BaseModel):
+    id_inventario: int
+    equipado: bool
+    quantidade: int
+    equipamento: EquipamentoResponse
+    model_config = ConfigDict(from_attributes=True)
+
+class GrimorioResponse(BaseModel):
+    id_grimorio: int
+    id_compendium: CompendiumResponse
+    model_config = ConfigDict(from_attributes=True)
+
+class PersonagemMaestriaResponse(BaseModel):
+    id_personagem_maestria: int
+    nome_personagem_maestria: str
+    descricao_personagem_maestria: str
+    tier: int
+    fragmento: int
+    model_config = ConfigDict(from_attributes=True)
+
+class PersonagemTituloResponse(BaseModel):
+    id_personagem_titulo: int
+    nome_titulo: str
+    descricao_titulo: str
+    titulo_principal: bool
+    ativo: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class PersonagemUpdate(BaseModel):
+    nome_personagem: Optional[str] = None
+    idade_personagem: Optional[int] = None
+    sexo_personagem: Optional[str] = None
+    altura_personagem: Optional[Decimal] = None
+    peso_personagem: Optional[Decimal] = None
+    alinhamento_personagem: Optional[str] = None
+    nivel_personagem: Optional[int] = None
+    xp_atual: Optional[int] = None
+    merito_atual: Optional[int] = None
+    atributo_for: Optional[int] = None
+    atributo_des: Optional[int] = None
+    atributo_con: Optional[int] = None
+    atributo_int: Optional[int] = None
+    atributo_sab: Optional[int] = None
+    atributo_car: Optional[int] = None
+    ativo: Optional[bool] = None

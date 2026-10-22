@@ -1,286 +1,289 @@
-import enum
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Index, Numeric, DateTime, text
-from sqlalchemy.dialects.postgresql import JSONB, ENUM
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Numeric, Enum, CheckConstraint, Text
 from sqlalchemy.orm import relationship
-from database import Base  # Mantendo a sua instância declarativa padrão
+from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
+from database import Base
+import datetime
 
-# ==========================================
-# 1. ENUMS (Mapeamento dos Types do DDL)
-# ==========================================
+# --- DEFINIÇÃO DE ENUMS (Conforme DDL) ---
 
-class EquipmentCategory(enum.Enum):
-    weapon = 'weapon'
-    armor = 'armor'
-    shield = 'shield'
-    consumable = 'consumable'
-    tool = 'tool'
-    adventuring_gear = 'adventuring_gear'
-    quest_item = 'quest_item'
+enum_afinidade = PG_ENUM(
+    'fogo', 'agua', 'terra', 'ar', 'profano', 'sagrado', 'psique', 'espacial', 
+    name='enum_afinidade'
+)
 
-class EquipmentSlotType(enum.Enum):
-    head = 'head'
-    torso = 'torso'
-    hands = 'hands'
-    legs = 'legs'
-    feet = 'feet'
-    main_hand = 'main_hand'
-    off_hand = 'off_hand'
-    two_handed = 'two_handed'
-    neck = 'neck'
-    ring = 'ring'
-    none = 'none'
+enum_atributo = PG_ENUM('FOR', 'DES', 'CON', 'INT', 'SAB', 'CAR', name='enum_atributo')
 
-class MaestryCategory(enum.Enum):
-    elemental = 'elemental'
-    weapon = 'weapon'
-    armor = 'armor'
-    tool = 'tool'
-    utility = 'utility'
+enum_categoria = PG_ENUM(
+    'escudo', 'acessorio', 'roupa', 'armadura_leve', 'armadura_media', 'armadura_pesada',
+    'arma_simples', 'arma_marcial', 'poçao', 'material', 'miscelanea', 'foco_arcano',
+    'municao', 'simbolo_sagrado', 'ferramenta', name='enum_categoria'
+)
 
-class MaestryType(enum.Enum):
-    base = 'base'
-    advanced = 'advanced'
-    superior = 'superior'
+enum_tipo_dano = PG_ENUM('PERF', 'CONC', 'CORT', name='enum_tipo_dano')
 
-class SpellAffinity(enum.Enum):
-    aqua = 'aqua'
-    ignis = 'ignis'
-    terra = 'terra'
-    ventus = 'ventus'
-    lux = 'lux'
-    umbra = 'umbra'
-    force = 'force'
-    none = 'none'
+enum_moeda = PG_ENUM('po', 'pp', 'pc', name='enum_moeda')
 
-class SpellRangeType(enum.Enum):
-    self = 'self'
-    touch = 'touch'
-    ranged = 'ranged'
-    special = 'special'
+enum_grau = PG_ENUM(
+    'rustico', 'refinado', 'eximio', 'transcendental', 'lendario', 'mitico', 'ascendido',
+    name='enum_grau'
+)
 
-class SpellType(enum.Enum):
-    arcane = 'arcane'
-    divine = 'divine'
-    natural = 'natural'
-    profane = 'profane'
-    unique = 'unique'
+enum_classe = PG_ENUM('aço', 'terra', 'espiritual', name='enum_classe')
 
+enum_raridade = PG_ENUM('comum', 'raro', 'lendario', 'mitico', 'incomum', name='enum_raridade')
 
-# ==========================================
-# 2. MODELOS / TABELAS
-# ==========================================
+enum_nivel_magia = PG_ENUM(
+    'basico', 'iniciante', 'intermediario', 'alto', 'superior', name='enum_nivel_magia'
+)
 
-class User(Base):
-    __tablename__ = "users"
+enum_distancia_magia = PG_ENUM('distancia', 'toque', 'area', 'auto', name='enum_distancia_magia')
 
-    user_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
-    user_uuid = Column(String(50), nullable=False, unique=True)
-    user_name = Column(String(100), nullable=False)
-    user_login = Column(String(50), nullable=False, unique=True)
-    user_pass = Column(String(255), nullable=False)
-    user_email = Column(String(50), nullable=False, unique=True)
-    is_active = Column(Boolean, nullable=False, default=True)
-    is_master = Column(Boolean, nullable=False, default=False)
+enum_tipo_tecnica = PG_ENUM('marcial', 'magica', 'psiquica', 'social', name='enum_tipo_tecnica')
 
-    # Relacionamentos
-    personagens = relationship("Character", back_populates="usuario", cascade="all, delete-orphan")
+class Usuario(Base):
+    __tablename__ = "usuario"
 
+    id_usuario = Column(Integer, primary_key=True, index=True)
+    uuid_usuario = Column(String(255), unique=True, nullable=False)
+    login = Column(String(50), nullable=False)
+    email_usuario = Column(String(50), unique=True, nullable=False)
+    senha_usuario = Column(String(255), nullable=False)
+    nome_usuario = Column(String(50), nullable=False)
+    criado_em = Column(DateTime, default=datetime.datetime.utcnow)
+    usuario_dm = Column(Boolean, default=False)
+    ativo = Column(Boolean, default=True)
 
-class Adventure(Base):
-    __tablename__ = "adventures"
+    personagens = relationship("Personagem", back_populates="usuario")
+    campanhas_mestradas = relationship("Campanha", back_populates="dm")
 
-    adventure_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
-    adventure_name = Column(String(50), nullable=False)
-    adventure_description = Column(String(255), nullable=True)
-    is_active = Column(Boolean, nullable=False, default=True)
-    adventure_create = Column(DateTime, nullable=False)
-    user_id_create = Column(Integer, nullable=False)
+class Campanha(Base):
+    __tablename__ = "campanha"
 
-    # Relacionamentos
-    personagens = relationship("Character", back_populates="aventura")
+    id_campanha = Column(Integer, primary_key=True, index=True)
+    nome_campanha = Column(String(100), nullable=False)
+    id_usuario_dm = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False)
+    criado_em = Column(DateTime, default=datetime.datetime.utcnow)
+    ativo = Column(Boolean, default=True)
 
-    __table_args__ = (
-        Index('adventures_index_0', 'adventure_id'),
-    )
+    dm = relationship("Usuario", back_populates="campanhas_mestradas")
+    personagens = relationship("Personagem", back_populates="campanha")
 
+class Personagem(Base):
+    __tablename__ = "personagem"
 
-class Feat(Base):
-    __tablename__ = "feats"
-
-    feat_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    feat_name = Column(String(50), nullable=False)
-    feat_description = Column(String(255), nullable=False)
-    feat_requisite = Column(JSONB, nullable=False)
-    is_active = Column(Boolean, nullable=False, default=True)
+    id_personagem = Column(Integer, primary_key=True, index=True)
+    uuid_personagem = Column(String(255), unique=True, nullable=False)
+    id_usuario = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False)
+    id_campanha = Column(Integer, ForeignKey("campanha.id_campanha", ondelete="CASCADE"), nullable=False)
+    
+    nome_personagem = Column(String(100), unique=True, nullable=False)
+    idade_personagem = Column(Integer, nullable=False)
+    sexo_personagem = Column(String(1), nullable=False)
+    altura_personagem = Column(Numeric(3, 2), nullable=False)
+    peso_personagem = Column(Numeric(3, 2), nullable=False)
+    alinhamento_personagem = Column(String(50), nullable=False)
+    nome_raca = Column(String(100), nullable=False)
+    idiomas = Column(String(255))
+    
+    afinidade_primaria = Column(enum_afinidade, nullable=False)
+    afinidade_secundaria = Column(enum_afinidade, nullable=False)
+    
+    nivel_personagem = Column(Integer, default=1, nullable=False)
+    exp_atual = Column(Integer, default=0, nullable=False)
+    merito_atual = Column(Integer, default=0, nullable=False)
+    
+    atributo_for = Column(Integer, default=8, nullable=False)
+    atributo_des = Column(Integer, default=8, nullable=False)
+    atributo_con = Column(Integer, default=8, nullable=False)
+    atributo_int = Column(Integer, default=8, nullable=False)
+    atributo_sab = Column(Integer, default=8, nullable=False)
+    atributo_car = Column(Integer, default=8, nullable=False)
+    
+    criado_em = Column(DateTime, default=datetime.datetime.utcnow)
+    alterado_em = Column(DateTime, onupdate=datetime.datetime.utcnow)
+    ativo = Column(Boolean, default=True)
 
     # Relacionamentos
-    personagens_associados = relationship("AssCharacterFeat", back_populates="talento", cascade="all, delete-orphan")
+    usuario = relationship("Usuario", back_populates="personagens")
+    campanha = relationship("Campanha", back_populates="personagens")
+    talento = relationship("PersonagemTalento", back_populates="personagem")
+    titulos = relationship("PersonagemTitulo", back_populates="personagem")
+    equipamento = relationship("Inventario", back_populates="personagem")
+    magias_conhecidas = relationship("Grimorio", back_populates="personagem")
+    habilidades = relationship("PersonagemHabilidade", back_populates="personagem")
+    maestrias = relationship("PersonagemMaestria", back_populates="personagem")
 
-    __table_args__ = (
-        Index('feats_index_0', 'feat_id', 'is_active'),
-        Index('idx_feat_requisite_gin', 'feat_requisite', postgresql_using='gin'),
-    )
+    __table_args__ = (CheckConstraint('nivel_personagem >= 1'),)
 
+class Talento(Base):
+    __tablename__ = "talento"
 
-class MaestryCatalog(Base):
-    __tablename__ = "maestries_catalog"
+    id_talento = Column(Integer, primary_key=True, index=True)
+    nome_talento = Column(String(50), nullable=False)
+    descricao_talento = Column(String(255), nullable=False)
+    nivel_minimo = Column(Integer, default=1, nullable=False)
+    atributo_requerido = Column(enum_atributo)
+    atributo_minimo = Column(Integer)
+    ativo = Column(Boolean, default=True)
 
-    maestry_slug = Column(String(30), primary_key=True, nullable=False)
-    maestry_name = Column(String(50), nullable=False)
-    category = Column(ENUM(MaestryCategory, name="maestry_category", inherit_schema=True), nullable=False)
-    m_type = Column(ENUM(MaestryType, name="maestry_type", inherit_schema=True), nullable=False, default=MaestryType.base)
-    description = Column(String(500), nullable=False)
-    unlock_requisite = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
-    grouped_bonus = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
-    is_active = Column(Boolean, nullable=False, default=True)
+    personagens = relationship("PersonagemTalento", back_populates="talento")
 
-    # Relacionamentos
-    equipamentos = relationship("Equipment", back_populates="maestria_catalogo")
-    personagens_maestrias = relationship("CharacterMaestry", back_populates="maestria_catalogo")
+class PersonagemTalento(Base):
+    __tablename__ = "personagem_talento"
 
+    id_personagem_talento = Column(Integer, primary_key=True, index=True)
+    id_personagem = Column(Integer, ForeignKey("personagem.id_personagem", ondelete="CASCADE"), nullable=False)
+    id_talento = Column(Integer, ForeignKey("talento.id_talento", ondelete="CASCADE"), nullable=False)
+    habilitado = Column(Boolean, default=False, nullable=False)
+    ativo = Column(Boolean, default=True, nullable=False)
 
-class Spell(Base):
-    __tablename__ = "spells"
+    personagem = relationship("Personagem", back_populates="talento")
+    talento = relationship("Talento", back_populates="personagens")
 
-    spell_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    spell_name = Column(String(50), nullable=False, unique=True)
-    spell_description = Column(String(500), nullable=False)
-    magic_type = Column(ENUM(SpellType, name="spell_type", inherit_schema=True), nullable=False)
-    affinity = Column(ENUM(SpellAffinity, name="spell_affinity", inherit_schema=True), nullable=False, default=SpellAffinity.none)
-    spell_circle = Column(Integer, nullable=False, default=1)
-    mana_cost = Column(Integer, nullable=False, default=0)
-    activation_time = Column(String(30), nullable=False, default='1 Action')
-    range_type = Column(ENUM(SpellRangeType, name="spell_range_type", inherit_schema=True), nullable=False, default=SpellRangeType.ranged)
-    range_value = Column(Integer, nullable=True)
-    duration = Column(String(30), nullable=False, default='Instantaneous')
-    is_concentration = Column(Boolean, nullable=False, default=False)
-    req_maestria_tier = Column(Integer, nullable=False, default=0)
-    req_maestria_fragments = Column(Integer, nullable=False, default=0)
-    spell_requisite = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
-    mechanics = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
-    is_active = Column(Boolean, nullable=False, default=True)
+class Equipamento(Base):
+    __tablename__ = "equipamento"
 
-    # Relacionamentos através da tabela associativa pura
-    personagens = relationship("Character", secondary="character_spells", back_populates="magias_conhecidas")
+    id_equipamento = Column(Integer, primary_key=True, index=True)
+    nome_equipamento = Column(String(50), nullable=False)
+    descricao_equipamento = Column(String(100), nullable=False)
+    categoria = Column(enum_categoria, nullable=False)
+    peso = Column(Numeric(3, 2), nullable=False)
+    tamanho = Column(Integer, default=1, nullable=False)
+    moeda_preco = Column(enum_moeda, nullable=False)
+    valor_preco = Column(Integer, nullable=False)
+    nivel_minimo = Column(Integer, default=1, nullable=False)
+    grau = Column(enum_grau, nullable=False)
+    classe = Column(enum_classe, nullable=False)
+    raridade = Column(enum_raridade, nullable=False)
+    maestria_tipo = Column(String(50))
+    atributo_requerido = Column(enum_atributo)
+    atributo_minimo = Column(Integer)
+    classe_armadura = Column(Integer, default=10)
+    consumivel = Column(Boolean, default=False, nullable=False)
+    unico = Column(Boolean, default=False, nullable=False)
+    ativo = Column(Boolean, default=True, nullable=False)
 
+    propriedades = relationship("EquipamentoPropriedadeArma", back_populates="equipamento")
+    inventarios = relationship("Inventario", back_populates="equipamento")
 
-class Equipment(Base):
-    __tablename__ = "equipments"
+class PropriedadeArma(Base):
+    __tablename__ = "propriedade_arma"
+    
+    id_propriedade_arma = Column(Integer, primary_key=True)
+    nome_propriedade_arma = Column(String(50), nullable=False)
+    descricao_propriedade_arma = Column(String(255), nullable=False)
 
-    equipment_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    equip_name = Column(String(50), nullable=False)
-    equip_description = Column(String(255), nullable=False)
-    category = Column(ENUM(EquipmentCategory, name="equipment_category", inherit_schema=True), nullable=False)
-    slot_target = Column(ENUM(EquipmentSlotType, name="equipment_slot_type", inherit_schema=True), nullable=False, default=EquipmentSlotType.none)
-    equip_size = Column(Integer, nullable=False, default=1)
-    equip_weight = Column(Numeric(5, 2), nullable=False, default=0.00)
-    equip_requisite = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
-    is_unique = Column(Boolean, nullable=False, default=False)
-    is_active = Column(Boolean, nullable=False, default=True)
-    maestry_slug = Column(String(30), ForeignKey("maestries_catalog.maestry_slug", onupdate="CASCADE"), nullable=True)
+class EquipamentoPropriedadeArma(Base):
+    __tablename__ = "equipamento_propriedade_arma"
+    
+    id_equipamento_propriedade_arma = Column(Integer, primary_key=True, index=True)
+    id_equipamento = Column(Integer, ForeignKey("equipamento.id_equipamento", ondelete="CASCADE"), nullable=False)
+    id_propriedade = Column(Integer, ForeignKey("propriedade_arma.id_propriedade_arma", ondelete="CASCADE"), nullable=False)
+    ativo = Column(Boolean, default=True, nullable=False)
 
-    # Relacionamentos
-    maestria_catalogo = relationship("MaestryCatalog", back_populates="equipamentos")
-    inventarios_personagens = relationship("CharacterEquipment", back_populates="equipamento")
+    equipamento = relationship("Equipamento", back_populates="propriedades")
 
+class PersonagemTitulo(Base):
+    __tablename__ = "personagem_titulo"
 
-class Character(Base):
-    __tablename__ = "personagens"
+    id_personagem_titulo = Column(Integer, primary_key=True)
+    id_personagem = Column(Integer, ForeignKey("personagem.id_personagem", ondelete="CASCADE"), nullable=False)
+    nome_titulo = Column(String(50), nullable=False)
+    descricao_titulo = Column(String(255), nullable=False)
+    titulo_principal = Column(Boolean, default=False, nullable=False)
+    ativo = Column(Boolean, default=True, nullable=False)
 
-    character_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    character_uuid = Column(String(255), nullable=False, unique=True)
-    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
-    character_name = Column(String(50), nullable=False, unique=True)
-    character_info = Column(JSONB, nullable=False)
-    character_details = Column(JSONB, nullable=False)
-    character_abilities = Column(JSONB, nullable=False)
-    is_active = Column(Boolean, nullable=False, default=True)
-    adventure_id = Column(Integer, ForeignKey("adventures.adventure_id", ondelete="SET NULL"), nullable=True)
-    url_image = Column(String, nullable=True)
+    personagem = relationship("Personagem", back_populates="titulos")
 
-    # Relacionamentos
-    usuario = relationship("User", back_populates="personagens")
-    aventura = relationship("Adventure", back_populates="personagens")
-    talentos_vinculados = relationship("AssCharacterFeat", back_populates="personagem", cascade="all, delete-orphan")
-    equipamentos_inventario = relationship("CharacterEquipment", back_populates="personagem", cascade="all, delete-orphan")
-    maestrias_personagem = relationship("CharacterMaestry", back_populates="personagem", cascade="all, delete-orphan")
-    magias_conhecidas = relationship("Spell", secondary="character_spells", back_populates="personagens")
+class Inventario(Base):
+    __tablename__ = "inventario"
 
-    __table_args__ = (
-        Index('characters_index_0', 'user_id', 'is_active'),
-        Index('idx_character_abilities_gin', 'character_abilities', postgresql_using='gin'),
-        Index('idx_character_details_gin', 'character_details', postgresql_using='gin'),
-        Index('idx_character_info_gin', 'character_info', postgresql_using='gin'),
-    )
+    id_inventario = Column(Integer, primary_key=True, index=True)
+    id_personagem = Column(Integer, ForeignKey("personagem.id_personagem", ondelete="CASCADE"), nullable=False)
+    id_equipamento = Column(Integer, ForeignKey("equipamento.id_equipamento", ondelete="CASCADE"), nullable=False)
+    equipado = Column(Boolean, default=False, nullable=False)
+    quantidade = Column(Integer, default=0, nullable=False)
 
+    personagem = relationship("Personagem", back_populates="equipamento")
+    equipamento = relationship("Equipamento", back_populates="inventarios")
 
-# ==========================================
-# 3. TABELAS DE ASSOCIAÇÃO / VÍNCULOS
-# ==========================================
+class Compendium(Base):
+    __tablename__ = "compendium"
 
-class AssCharacterFeat(Base):
-    __tablename__ = "ass_characters_feat"
+    id_compendium = Column(Integer, primary_key=True, index=True)
+    nome_compendium = Column(String(50), nullable=False)
+    descricao_compendium = Column(String(255), nullable=False)
+    afinidade1 = Column(enum_afinidade)
+    afinidade2 = Column(enum_afinidade)
+    afinidade3 = Column(enum_afinidade)
+    nivel = Column(enum_nivel_magia, nullable=False)
+    custo_mana = Column(Integer, default=0, nullable=False)
+    alcance_tipo = Column(enum_distancia_magia, nullable=False)
+    alcance = Column(Integer)
+    conjuracao = Column(String(50), nullable=False)
+    duracao = Column(Integer, nullable=False)
+    concentracao = Column(Boolean, default=False, nullable=False)
+    tier_maestria_minima = Column(Integer, nullable=False)
+    frag_maestria_minima = Column(Integer, nullable=False)
+    inteligencia_minima = Column(Integer, default=10, nullable=False)
+    requer_arcanismo = Column(Boolean, default=False, nullable=False)
 
-    ass_characters_feat_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    character_id = Column(Integer, ForeignKey("personagens.character_id", ondelete="CASCADE"), nullable=False)
-    feat_id = Column(Integer, ForeignKey("feats.feat_id", ondelete="CASCADE"), nullable=False)
-    is_enabled = Column(Boolean, nullable=False, default=False)
-    is_active = Column(Boolean, nullable=False, default=True)
+    personagens = relationship("Grimorio", back_populates="spell")
 
-    # Relacionamentos
-    personagem = relationship("Character", back_populates="talentos_vinculados")
-    talento = relationship("Feat", back_populates="personagens_associados")
+class Grimorio(Base):
+    __tablename__ = "grimorio"
 
-    __table_args__ = (
-        Index('ass_characters_feats_carregamento_ficha_idx', 'character_id', 'is_active', 'is_enabled', 'feat_id'),
-        Index('ass_characters_feats_ficha_idx', 'character_id', 'is_active', 'is_enabled', 'feat_id'),
-        Index('ass_characters_traits_index_1', 'character_id', 'feat_id', unique=True),
-    )
+    id_grimorio = Column(Integer, primary_key=True, index=True)
+    id_personagem = Column(Integer, ForeignKey("personagem.id_personagem", ondelete="CASCADE"), nullable=False)
+    id_compendium = Column(Integer, ForeignKey("compendium.id_compendium", ondelete="CASCADE"), nullable=False)
 
+    personagem = relationship("Personagem", back_populates="magias_conhecidas")
+    spell = relationship("Compendium", back_populates="personagens")
 
-class CharacterEquipment(Base):
-    __tablename__ = "character_equipments"
+class Habilidade(Base):
+    __tablename__ = "habilidade"
 
-    character_equipment_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    character_id = Column(Integer, ForeignKey("personagens.character_id", ondelete="CASCADE"), nullable=False)
-    equipment_id = Column(Integer, ForeignKey("equipments.equipment_id"), nullable=False)
-    quantity = Column(Integer, nullable=False, default=1)
-    is_equipped = Column(Boolean, nullable=False, default=False)
-    current_durability = Column(Integer, nullable=True)
-    custom_name = Column(String(50), nullable=True)
+    id_habilidade = Column(Integer, primary_key=True, index=True)
+    nome_habilidade = Column(String(50), nullable=False)
+    descricao_habilidade = Column(String(100), nullable=False)
+    tipo_tecnica = Column(enum_tipo_tecnica, nullable=False)
+    nivel_minimo = Column(Integer, default=1, nullable=False)
+    rank_minimo = Column(Integer, default=1, nullable=False)
+    tipo_maestria_req1 = Column(String(255))
+    tipo_maestria_req2 = Column(String(50))
+    tipo_maestria_req3 = Column(String(255))
+    tipo_maestria_req4 = Column(String(255))
+    atributo1_requerido = Column(enum_atributo)
+    atributo1_minimo = Column(Integer)
+    atributo2_requerido = Column(enum_atributo)
+    atributo2_minimo = Column(Integer)
+    atributo3_requerido = Column(enum_atributo)
+    atributo3_minimo = Column(Integer)
+    mana_custo = Column(Integer)
+    vigor_custo = Column(Integer)
+    ativo = Column(Boolean, default=True, nullable=False)
 
-    # Relacionamentos
-    personagem = relationship("Character", back_populates="equipamentos_inventario")
-    equipamento = relationship("Equipment", back_populates="inventarios_personagens")
+    personagens = relationship("PersonagemHabilidade", back_populates="ability")
+class PersonagemHabilidade(Base):
+    __tablename__ = "personagem_habilidade"
 
-    __table_args__ = (
-        Index('character_equipments_calc_peso_idx', 'character_id', 'is_equipped'),
-        Index('idx_character_equipments_slots_ativos', 'character_id', 'is_equipped'),
-    )
+    id_personagem_habilidade = Column(Integer, primary_key=True, index=True)
+    id_personagem = Column(Integer, ForeignKey("personagem.id_personagem", ondelete="CASCADE"), nullable=False)
+    id_habilidade = Column(Integer, ForeignKey("habilidade.id_habilidade", ondelete="CASCADE"), nullable=False)
 
+    personagem = relationship("Personagem", back_populates="habilidades")
+    ability = relationship("Habilidade", back_populates="personagens")
 
-class CharacterMaestry(Base):
-    __tablename__ = "character_maestries"
+class PersonagemMaestria(Base):
+    __tablename__ = "personagem_maestria"
 
-    character_maestry_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    character_id = Column(Integer, ForeignKey("personagens.character_id", ondelete="CASCADE"), nullable=False)
-    maestry_slug = Column(String(30), ForeignKey("maestries_catalog.maestry_slug", onupdate="CASCADE"), nullable=False)
-    current_tier = Column(Integer, nullable=False, default=1)
-    current_fragments = Column(Integer, nullable=False, default=0)
+    id_personagem_maestria = Column(Integer, primary_key=True, index=True)
+    id_personagem = Column(Integer, ForeignKey("personagem.id_personagem", ondelete="CASCADE"), nullable=False)
+    nome_personagem_maestria = Column(String(255), nullable=False)
+    descricao_personagem_maestria = Column(String(255), nullable=False)
+    tier = Column(Integer, nullable=False)
+    fragmento = Column(Integer, nullable=False)
 
-    # Relacionamentos
-    personagem = relationship("Character", back_populates="maestrias_personagem")
-    maestria_catalogo = relationship("MaestryCatalog", back_populates="personagens_maestrias")
+    personagem = relationship("Personagem", back_populates="maestrias")
 
-    __table_args__ = (
-        Index('character_maestries_character_id_maestry_slug_key', 'character_id', 'maestry_slug', unique=True),
-    )
-
-
-class CharacterSpell(Base):
-    """ Tabela associativa puramente Relacional para o Mapeamento Many-to-Many entre Personagens e Magias """
-    __tablename__ = "character_spells"
-
-    character_id = Column(Integer, ForeignKey("personagens.character_id", ondelete="CASCADE"), primary_key=True, nullable=False)
-    spell_id = Column(Integer, ForeignKey("spells.spell_id", ondelete="CASCADE"), primary_key=True, nullable=False)
-    learned_at = Column(DateTime, nullable=False, server_default=text("now()"))
+    __table_args__ = (CheckConstraint('tier BETWEEN 0 AND 10'),)

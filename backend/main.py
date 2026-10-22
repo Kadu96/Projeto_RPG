@@ -113,10 +113,6 @@ def login(login_data: schemas.UserLogin, db: Session = Depends(get_db)):
 def list_equipments(db: Session = Depends(get_db)):
     return db.query(models.Equipment).filter(models.Equipment.is_active == True).all()
 
-@app.get("/maestrias", response_model=List[schemas.MaestryCatalogResponse])
-def list_maestrias(db: Session = Depends(get_db)):
-    return db.query(models.MaestryCatalog).filter(models.MaestryCatalog.is_active == True).all()
-
 @app.get("/campanhas", response_model=List[schemas.AdventureResponse])
 def list_adventures (
     db: Session =  Depends(get_db)
@@ -145,7 +141,7 @@ def list_spells (
 
 @app.post("/personagens/salvar", response_model=schemas.CharacterResponse, status_code=status.HTTP_201_CREATED)
 def create_character(
-    char: schemas.CharacterCreate, 
+    char_in: schemas.CharacterCreate, 
     db: Session = Depends(get_db), 
     current_user_id: int = Depends(get_current_user_id)
 ):

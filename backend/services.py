@@ -16,17 +16,19 @@ def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_i
         "CAR": "carisma",
     }
     
-    # Obter atributos enviados pelo front ou usar 10 como base
+    # Obter atributos enviados pelo front ou usar 8 como base
     atributos_front = char_in.character_abilities.get("atributos", {}) if char_in.character_abilities else {}
     atributos = {
-        "forca": atributos_front.get("forca", 10),
-        "destreza": atributos_front.get("destreza", 10),
-        "constituicao": atributos_front.get("constituicao", 10),
-        "inteligencia": atributos_front.get("inteligencia", 10),
-        "sabedoria": atributos_front.get("sabedoria", 10),
-        "carisma": atributos_front.get("carisma", 10),
+        "forca": atributos_front.get("forca", 8),
+        "destreza": atributos_front.get("destreza", 8),
+        "constituicao": atributos_front.get("constituicao", 8),
+        "inteligencia": atributos_front.get("inteligencia", 8),
+        "sabedoria": atributos_front.get("sabedoria", 8),
+        "carisma": atributos_front.get("carisma", 8),
     }
+    
     moedas = {"ouro": 100, "prata": 0, "cobre": 0}
+    
     pericias = {
         "acrobacia": 0,
         "adestramento": 0,
@@ -47,6 +49,8 @@ def calcular_ficha_inicial(db: Session, char_in: schemas.CharacterCreate, user_i
         "religiao": 0,
         "sobrevivencia": 0,
     }
+
+    raca = char_in.character_info.get("raca")
 
     # --- Cálculos de Modificadores ---
     mod_for = (atributos["forca"] - 10) // 2
