@@ -1,14 +1,3 @@
-CREATE TYPE "enum_afinidade" AS ENUM (
-	'fogo',
-	'agua',
-	'terra',
-	'ar',
-	'profano',
-	'sagrado',
-	'psique',
-	'espacial'
-);
-
 CREATE TYPE "enum_atributo" AS ENUM (
 	'FOR',
 	'DES',
@@ -27,19 +16,21 @@ CREATE TYPE "enum_categoria" AS ENUM (
 	'armadura_pesada',
 	'arma_simples',
 	'arma_marcial',
-	'poçao',
 	'material',
 	'miscelanea',
 	'foco_arcano',
 	'municao',
 	'simbolo_sagrado',
-	'ferramenta'
+	'ferramenta',
+	'pocao'
 );
 
 CREATE TYPE "enum_tipo_dano" AS ENUM (
 	'PERF',
 	'CONC',
-	'CORT'
+	'CORT',
+	'MAGK',
+	'ESPI'
 );
 
 CREATE TYPE "enum_moeda" AS ENUM (
@@ -110,10 +101,17 @@ CREATE TYPE "enum_propriedade" AS ENUM (
 CREATE TYPE "enum_slot_equip" AS ENUM (
 	'cintura',
 	'costas',
-	'Peitoral',
-	'Acessorio',
-	'Armadura',
-	'Roupa'
+	'peitoral',
+	'acessorio',
+	'armadura',
+	'roupa'
+);
+
+CREATE TYPE "enum_maestria_tipo" AS ENUM (
+	'pericia',
+	'habilidade',
+	'magia',
+	'marcial'
 );
 
 CREATE TABLE IF NOT EXISTS "usuario" (
@@ -147,7 +145,7 @@ CREATE TABLE IF NOT EXISTS "campanha" (
 	PRIMARY KEY("id_campanha")
 );
 
-CREATE INDEX "campanha_index_0"
+CREATE UNIQUE INDEX "campanha_index_0"
 ON "campanha" ("id_campanha");
 
 CREATE TABLE IF NOT EXISTS "talento" (
@@ -155,13 +153,15 @@ CREATE TABLE IF NOT EXISTS "talento" (
 	"nome_talento" VARCHAR(50) NOT NULL,
 	"descricao_talento" VARCHAR(255) NOT NULL,
 	"nivel_minimo" INTEGER NOT NULL DEFAULT 1,
+	"maestria_tipo" ENUM_MAESTRIA_TIPO ARRAY NOT NULL,
+	"tipo_maestria_req" ENUM_MAESTRIA_TIPO ARRAY,
 	"atributo_requerido" ENUM_ATRIBUTO ARRAY,
 	"atributo_minimo" INTEGER ARRAY,
 	"ativo" BOOLEAN NOT NULL DEFAULT True,
 	PRIMARY KEY("id_talento")
 );
 
-CREATE INDEX "talento_index_0"
+CREATE UNIQUE INDEX "talento_index_0"
 ON "talento" ("id_talento");
 
 CREATE TABLE IF NOT EXISTS "equipamento" (
@@ -171,13 +171,15 @@ CREATE TABLE IF NOT EXISTS "equipamento" (
 	"categoria" ENUM_CATEGORIA NOT NULL,
 	"peso" NUMERIC(3,2) NOT NULL,
 	"tamanho" INTEGER NOT NULL DEFAULT 1,
-	"moeda_preco" ENUM_MOEDA NOT NULL,
-	"valor_preco" INTEGER NOT NULL,
+	"pc_preco" INTEGER NOT NULL DEFAULT 0,
+	"pp_preco" INTEGER NOT NULL DEFAULT 0,
+	"po_preco" INTEGER NOT NULL DEFAULT 0,
 	"nivel_minimo" INTEGER NOT NULL DEFAULT 1,
 	"grau" ENUM_GRAU NOT NULL,
 	"classe" ENUM_CLASSE NOT NULL,
 	"raridade" ENUM_RARIDADE NOT NULL,
-	"maestria_tipo" VARCHAR(50),
+	"maestria_tipo" ENUM_MAESTRIA_TIPO ARRAY NOT NULL,
+	"tipo_maestria_req" ENUM_MAESTRIA_TIPO ARRAY,
 	"atributo_requerido" ENUM_ATRIBUTO ARRAY,
 	"atributo_minimo" INTEGER ARRAY,
 	"defesa" INTEGER,
@@ -188,7 +190,7 @@ CREATE TABLE IF NOT EXISTS "equipamento" (
 	PRIMARY KEY("id_equipamento")
 );
 
-CREATE INDEX "equipamento_index_0"
+CREATE UNIQUE INDEX "equipamento_index_0"
 ON "equipamento" ("id_equipamento");
 CREATE INDEX "equipamento_index_1"
 ON "equipamento" ("categoria");
@@ -206,6 +208,8 @@ CREATE TABLE IF NOT EXISTS "compendium" (
 	"nome_compendium" VARCHAR(50) NOT NULL,
 	"descricao_compendium" VARCHAR(255) NOT NULL,
 	"afinidade" ENUM_AFINIDADE ARRAY,
+	"maestria_tipo" ENUM_MAESTRIA_TIPO ARRAY NOT NULL,
+	"tipo_maestria_req" ENUM_MAESTRIA_TIPO ARRAY,
 	"nivel" ENUM_NIVEL_MAGIA NOT NULL,
 	"custo_mana" INTEGER NOT NULL DEFAULT 0,
 	"alcance_tipo" ENUM_DISTANCIA_MAGIA NOT NULL,
@@ -217,10 +221,11 @@ CREATE TABLE IF NOT EXISTS "compendium" (
 	"frag_maestria_minima" INTEGER NOT NULL,
 	"inteligencia_minima" INTEGER NOT NULL DEFAULT 10,
 	"requer_arcanismo" BOOLEAN NOT NULL DEFAULT False,
+	"minimo_arcanismo" INTEGER,
 	PRIMARY KEY("id_compendium")
 );
 
-CREATE INDEX "compendium_magia_index_0"
+CREATE UNIQUE INDEX "compendium_magia_index_0"
 ON "compendium" ("id_compendium");
 CREATE INDEX "compendium_magia_index_1"
 ON "compendium" ("afinidade");
@@ -232,7 +237,8 @@ CREATE TABLE IF NOT EXISTS "habilidade" (
 	"tipo_tecnica" ENUM_TIPO_TECNICA NOT NULL,
 	"nivel_minimo" INTEGER NOT NULL DEFAULT 1,
 	"rank_minimo" INTEGER NOT NULL DEFAULT 1,
-	"tipo_maestria_req" VARCHAR(255) ARRAY,
+	"maestria_tipo" ENUM_MAESTRIA_TIPO ARRAY NOT NULL,
+	"tipo_maestria_req" ENUM_MAESTRIA_TIPO ARRAY,
 	"atributo_requerido" ENUM_ATRIBUTO ARRAY,
 	"atributo_minimo" INTEGER ARRAY,
 	"mana_custo" INTEGER,
@@ -241,7 +247,7 @@ CREATE TABLE IF NOT EXISTS "habilidade" (
 	PRIMARY KEY("id_habilidade")
 );
 
-CREATE INDEX "habilidade_index_0"
+CREATE UNIQUE INDEX "habilidade_index_0"
 ON "habilidade" ("id_habilidade");
 CREATE INDEX "habilidade_index_1"
 ON "habilidade" ("tipo_tecnica");
@@ -265,7 +271,7 @@ CREATE TABLE IF NOT EXISTS "raca" (
 	PRIMARY KEY("id_raca")
 );
 
-CREATE INDEX "raca_index_0"
+CREATE UNIQUE INDEX "raca_index_0"
 ON "raca" ("id_raca");
 
 CREATE TABLE IF NOT EXISTS "personagem" (
@@ -281,7 +287,6 @@ CREATE TABLE IF NOT EXISTS "personagem" (
 	"peso_personagem" NUMERIC(3,2) NOT NULL,
 	"alinhamento_personagem" VARCHAR(50) NOT NULL,
 	"idiomas" VARCHAR(255) ARRAY NOT NULL,
-	"afinidade_primaria" ENUM_AFINIDADE ARRAY NOT NULL,
 	"nivel_personagem" INTEGER NOT NULL DEFAULT 1,
 	"exp_atual" INTEGER NOT NULL DEFAULT 0,
 	"merito_atual" INTEGER NOT NULL DEFAULT 0,
@@ -298,9 +303,9 @@ CREATE TABLE IF NOT EXISTS "personagem" (
 	PRIMARY KEY("id_personagem")
 );
 
-CREATE INDEX "personagem_index_0"
+CREATE UNIQUE INDEX "personagem_index_0"
 ON "personagem" ("id_personagem", "id_campanha");
-CREATE INDEX "personagem_index_1"
+CREATE UNIQUE INDEX "personagem_index_1"
 ON "personagem" ("id_personagem", "id_usuario");
 CREATE UNIQUE INDEX "personagem_index_2"
 ON "personagem" ("uuid_personagem");
@@ -328,7 +333,7 @@ CREATE TABLE IF NOT EXISTS "grimorio" (
 	PRIMARY KEY("id_grimorio")
 );
 
-CREATE INDEX "grimorio_index_0"
+CREATE UNIQUE INDEX "grimorio_index_0"
 ON "grimorio" ("id_grimorio");
 CREATE UNIQUE INDEX "grimorio_index_1"
 ON "grimorio" ("id_personagem", "id_compendium");
@@ -342,23 +347,10 @@ CREATE TABLE IF NOT EXISTS "personagem_talento" (
 	PRIMARY KEY("id_personagem_talento")
 );
 
-CREATE INDEX "personagem_talento_index_0"
+CREATE UNIQUE INDEX "personagem_talento_index_0"
 ON "personagem_talento" ("id_personagem_talento");
 CREATE UNIQUE INDEX "personagem_talento_index_1"
 ON "personagem_talento" ("id_personagem", "id_talento");
-
-CREATE TABLE IF NOT EXISTS "personagem_titulo" (
-	"id_personagem_titulo" INTEGER NOT NULL GENERATED BY DEFAULT AS IDENTITY,
-	"id_personagem" INTEGER NOT NULL,
-	"nome_titulo" VARCHAR(50) NOT NULL,
-	"descricao_titulo" VARCHAR(255) NOT NULL,
-	"titulo_principal" BOOLEAN NOT NULL DEFAULT False,
-	"ativo" BOOLEAN NOT NULL DEFAULT True,
-	PRIMARY KEY("id_personagem_titulo")
-);
-
-CREATE UNIQUE INDEX "personagem_titulo_index_0"
-ON "personagem_titulo" ("id_personagem", "nome_titulo");
 
 CREATE TABLE IF NOT EXISTS "personagem_habilidade" (
 	"id_personagem_habilidade" INTEGER NOT NULL GENERATED BY DEFAULT AS IDENTITY,
@@ -367,7 +359,7 @@ CREATE TABLE IF NOT EXISTS "personagem_habilidade" (
 	PRIMARY KEY("id_personagem_habilidade")
 );
 
-CREATE INDEX "personagem_habilidade_index_0"
+CREATE UNIQUE INDEX "personagem_habilidade_index_0"
 ON "personagem_habilidade" ("id_personagem_habilidade");
 CREATE UNIQUE INDEX "personagem_habilidade_index_1"
 ON "personagem_habilidade" ("id_personagem", "id_habilidade");
@@ -382,24 +374,10 @@ CREATE TABLE IF NOT EXISTS "personagem_maestria" (
 	PRIMARY KEY("id_personagem_maestria")
 );
 
-CREATE INDEX "personagem_maestria_index_0"
+CREATE UNIQUE INDEX "personagem_maestria_index_0"
 ON "personagem_maestria" ("id_personagem_maestria");
 CREATE UNIQUE INDEX "personagem_maestria_index_1"
 ON "personagem_maestria" ("id_personagem", "nome_personagem_maestria");
-
-CREATE TABLE IF NOT EXISTS "personagem_pericia" (
-	"id_personagem_pericia" INTEGER NOT NULL GENERATED BY DEFAULT AS IDENTITY,
-	"id_personagem" INTEGER NOT NULL,
-	"pericia" VARCHAR(255) NOT NULL,
-	"nivel" INTEGER NOT NULL CHECK("nivel" between 0 and 10),
-	"fragmentos" INTEGER NOT NULL CHECK("fragmentos" between 0 and 5),
-	PRIMARY KEY("id_personagem_pericia")
-);
-
-CREATE INDEX "personagem_pericia_index_0"
-ON "personagem_pericia" ("id_personagem_pericia");
-CREATE UNIQUE INDEX "personagem_pericia_index_1"
-ON "personagem_pericia" ("id_personagem", "pericia");
 
 CREATE TABLE IF NOT EXISTS "equipamento_equipado" (
 	"id_inventario" INTEGER NOT NULL GENERATED BY DEFAULT AS IDENTITY,
@@ -412,7 +390,7 @@ CREATE TABLE IF NOT EXISTS "equipamento_equipado" (
 
 CREATE UNIQUE INDEX "inventario_index_0"
 ON "equipamento_equipado" ("id_personagem", "id_equipamento");
-CREATE INDEX "inventario_index_1"
+CREATE UNIQUE INDEX "inventario_index_1"
 ON "equipamento_equipado" ("id_inventario");
 CREATE INDEX "inventario_index_2"
 ON "equipamento_equipado" ("equipado");
@@ -431,9 +409,6 @@ ADD FOREIGN KEY("id_personagem") REFERENCES "personagem"("id_personagem")
 ON UPDATE NO ACTION ON DELETE CASCADE;
 ALTER TABLE "personagem_talento"
 ADD FOREIGN KEY("id_talento") REFERENCES "talento"("id_talento")
-ON UPDATE NO ACTION ON DELETE CASCADE;
-ALTER TABLE "personagem_titulo"
-ADD FOREIGN KEY("id_personagem") REFERENCES "personagem"("id_personagem")
 ON UPDATE NO ACTION ON DELETE CASCADE;
 ALTER TABLE "inventario"
 ADD FOREIGN KEY("id_personagem") REFERENCES "personagem"("id_personagem")
@@ -455,9 +430,6 @@ ADD FOREIGN KEY("id_personagem") REFERENCES "personagem"("id_personagem")
 ON UPDATE NO ACTION ON DELETE CASCADE;
 ALTER TABLE "personagem_maestria"
 ADD FOREIGN KEY("id_personagem_maestria") REFERENCES "personagem"("id_personagem")
-ON UPDATE NO ACTION ON DELETE CASCADE;
-ALTER TABLE "personagem_pericia"
-ADD FOREIGN KEY("id_personagem") REFERENCES "personagem"("id_personagem")
 ON UPDATE NO ACTION ON DELETE CASCADE;
 ALTER TABLE "personagem"
 ADD FOREIGN KEY("id_raca") REFERENCES "raca"("id_raca")
