@@ -393,6 +393,15 @@ Table treinamento_ciclo [headercolor: #175e7a] {
 		(id_personagem, id_maestria, status) [ name: 'treinamento_ciclo_index_0' ]
 		(id_personagem, data_inicio) [ name: 'treinamento_ciclo_index_1' ]
 	}
+Table maestria_fragmento_historico [headercolor: #175e7a] {
+	id_historico integer [ pk, increment ]
+	id_personagem_maestria integer [ not null ]
+	quantidade_meio_fragmentos integer [ not null ]
+	origem varchar(30) [ not null ]
+	referencia_origem varchar(100)
+	concedido_por_usuario integer
+	criado_em timestamp [ not null ]
+	observacao text
 }
 
 Table personagem_talento [headercolor: #175e7a] {
@@ -511,6 +520,7 @@ Ref fk_equipamento_equipado_id_equipamento_equipamento {
 }
 
 Ref maestria_hierarquia {
+Ref maestria_pai {
 	maestria.id_maestria_pai > maestria.id_maestria [ delete: no action, update: no action ]
 }
 
@@ -544,4 +554,10 @@ Ref historico_treinamento {
 
 Ref historico_usuario {
 	personagem_maestria_historico.id_usuario_concedente > usuario.id_usuario [ delete: no action, update: no action ]
+Ref historico_personagem_maestria {
+	maestria_fragmento_historico.id_personagem_maestria > personagem_maestria.id_personagem_maestria [ delete: no action, update: no action ]
+}
+
+Ref historico_concedente {
+	maestria_fragmento_historico.concedido_por_usuario > usuario.id_usuario [ delete: no action, update: no action ]
 }
