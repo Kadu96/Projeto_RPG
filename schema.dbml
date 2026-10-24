@@ -49,7 +49,7 @@ enum enum_grau {
 	ascendido
 }
 
-enum enum_classe {
+enum enum_classe_equip {
 	"aço"
 	terra
 	espiritual
@@ -196,14 +196,14 @@ Table equipamento [headercolor: #175e7a] {
 	nome_equipamento varchar(50) [ not null ]
 	descricao_equipamento varchar(255) [ not null ]
 	categoria enum_categoria [ not null ]
-	peso numeric(3,2) [ not null ]
+	peso numeric(4,2) [ not null ]
 	tamanho integer [ not null, default: 1 ]
 	pc_preco integer [ not null, default: 0 ]
 	pp_preco integer [ not null, default: 0 ]
 	po_preco integer [ not null, default: 0 ]
 	nivel_minimo integer [ not null, default: 1 ]
 	grau enum_grau [ not null ]
-	classe enum_classe [ not null ]
+	classe enum_classe_equip [ not null ]
 	raridade enum_raridade [ not null ]
 	maestria_tipo enum_maestria_tipo [ not null ]
 	tipo_maestria_req enum_maestria_tipo
@@ -228,7 +228,7 @@ Table equipamento [headercolor: #175e7a] {
 Table compendium [headercolor: #175e7a] {
 	id_compendium integer [ pk, increment, not null ]
 	nome_compendium varchar(50) [ not null ]
-	descricao_compendium varchar(255) [ not null ]
+	descricao_compendium varchar(500) [ not null ]
 	afinidade enum_afinidade
 	maestria_tipo enum_maestria_tipo [ not null ]
 	tipo_maestria_req enum_maestria_tipo
@@ -336,7 +336,7 @@ Table inventario [headercolor: #175e7a] {
 	qtd_max integer [ not null, default: 1 ]
 
 	indexes {
-		(id_personagem, id_equipamento) [ name: 'inventario_index_0', unique ]
+		(id_personagem, id_equipamento) [ name: 'inventario_index_0' ]
 		(id_inventario) [ name: 'inventario_index_1' ]
 	}
 }
@@ -432,6 +432,7 @@ Table personagem_maestria [headercolor: #175e7a] {
 	id_personagem_maestria integer [ pk, increment ]
 	id_personagem integer [ not null ]
 	id_maestria integer [ not null ]
+	unidades_meio_fragmento integer [ not null ]
 	unidades_meio_fragmento integer [ not null, default: 0 ]
 	alterado_em timestamp
 
@@ -459,6 +460,7 @@ Table equipamento_equipado [headercolor: #175e7a] {
 	ativo boolean [ not null, default: True ]
 
 	indexes {
+		(id_inventario, slot_equip) [ name: 'equipamento_equipado_index_0', unique ]
 		(id_inventario, id_equipamento) [ name: 'inventario_index_1', unique ]
 	}
 }
@@ -507,14 +509,11 @@ Ref fk_personagem_habilidade_id_personagem_personagem {
 	personagem_habilidade.id_personagem < personagem.id_personagem [ delete: cascade, update: no action ]
 }
 
-Ref fk_personagem_maestria_id_personagem_maestria_personagem {
-	personagem_maestria.id_personagem_maestria - personagem.id_personagem [ delete: cascade, update: no action ]
-}
-
 Ref fk_personagem_id_raca_raca {
 	personagem.id_raca < raca.id_raca [ delete: cascade, update: no action ]
 }
 
+Ref maestria_hierarquia {
 Ref fk_equipamento_equipado_id_equipamento_equipamento {
 	equipamento_equipado.id_equipamento > equipamento.id_equipamento [ delete: cascade, update: no action ]
 }
@@ -554,6 +553,10 @@ Ref historico_treinamento {
 
 Ref historico_usuario {
 	personagem_maestria_historico.id_usuario_concedente > usuario.id_usuario [ delete: no action, update: no action ]
+}
+
+Ref fk_equipamento_equipado_id_inventario_inventario {
+	equipamento_equipado.id_inventario - inventario.id_inventario [ delete: no action, update: no action ]
 Ref historico_personagem_maestria {
 	maestria_fragmento_historico.id_personagem_maestria > personagem_maestria.id_personagem_maestria [ delete: no action, update: no action ]
 }
