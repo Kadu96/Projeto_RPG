@@ -124,6 +124,26 @@ enum enum_afinidade {
 	espacial
 }
 
+enum enum_treinamento_atividade {
+	pratica
+	leitura
+	meditacao
+	estudo
+}
+
+enum enum_treinamento_status {
+	em_andamento
+	concluido
+	interrompido
+	cancelado
+}
+
+enum enum_fragmento_origem {
+	treinamento
+	mestre
+	ajuste_administrativo
+}
+
 Table usuario [headercolor: #175e7a] {
 	id_usuario integer [ pk, increment, not null, unique ]
 	uuid_usuario varchar(255) [ not null, unique ]
@@ -347,6 +367,32 @@ Table maestria [headercolor: #175e7a] {
 	}
 }
 
+Table treinamento_dia [headercolor: #175e7a] {
+	id_treinamento_dia integer [ pk, increment ]
+	id_treinamento_ciclo integer [ not null ]
+	data_treinamento date [ not null ]
+	horas_validas numeric(4,2) [ not null ]
+	atividade enum_treinamento_atividade [ not null ]
+	observacao text
+
+	indexes {
+		(id_treinamento_ciclo, data_treinamento) [ name: 'treinamento_dia_index_0', unique ]
+	}
+}
+
+Table treinamento_ciclo [headercolor: #175e7a] {
+	id_treinamento_ciclo integer [ pk, increment ]
+	id_personagem integer [ not null ]
+	id_maestria integer [ not null ]
+	data_inicio date [ not null ]
+	status enum_treinamento_status [ not null, default: em_andamento ]
+	concluido_em timestamp
+	criado_em timestamp [ not null ]
+
+	indexes {
+		(id_personagem, id_maestria, status) [ name: 'treinamento_ciclo_index_0' ]
+		(id_personagem, data_inicio) [ name: 'treinamento_ciclo_index_1' ]
+	}
 Table maestria_fragmento_historico [headercolor: #175e7a] {
 	id_historico integer [ pk, increment ]
 	id_personagem_maestria integer [ not null ]
@@ -392,6 +438,18 @@ Table personagem_maestria [headercolor: #175e7a] {
 	indexes {
 		(id_personagem, id_maestria) [ name: 'personagem_maestria_index_0', unique ]
 	}
+}
+
+Table personagem_maestria_historico [headercolor: #175e7a] {
+	id_historico integer [ pk, increment ]
+	id_personagem_maestria integer [ not null ]
+	id_treinamento_ciclo integer
+	quantidade_meio_fragmentos integer [ not null ]
+	origem enum_fragmento_origem [ not null ]
+	id_usuario_concedente integer
+	chave_idempotencia varchar(150) [ unique ]
+	criado_em timestamp [ not null ]
+	observacao text
 }
 
 Table equipamento_equipado [headercolor: #175e7a] {
@@ -461,6 +519,7 @@ Ref fk_equipamento_equipado_id_equipamento_equipamento {
 	equipamento_equipado.id_equipamento > equipamento.id_equipamento [ delete: cascade, update: no action ]
 }
 
+Ref maestria_hierarquia {
 Ref maestria_pai {
 	maestria.id_maestria_pai > maestria.id_maestria [ delete: no action, update: no action ]
 }
@@ -473,6 +532,28 @@ Ref personagem_maestria_catalogo {
 	personagem_maestria.id_maestria > maestria.id_maestria [ delete: no action, update: no action ]
 }
 
+Ref treinamento_personagem {
+	treinamento_ciclo.id_personagem > personagem.id_personagem [ delete: no action, update: no action ]
+}
+
+Ref treinamento_maestria {
+	treinamento_ciclo.id_maestria > maestria.id_maestria [ delete: no action, update: no action ]
+}
+
+Ref treinamento_dias {
+	treinamento_dia.id_treinamento_ciclo > treinamento_ciclo.id_treinamento_ciclo [ delete: no action, update: no action ]
+}
+
+Ref historico_maestria {
+	personagem_maestria_historico.id_personagem_maestria > personagem_maestria.id_personagem_maestria [ delete: no action, update: no action ]
+}
+
+Ref historico_treinamento {
+	personagem_maestria_historico.id_treinamento_ciclo > treinamento_ciclo.id_treinamento_ciclo [ delete: no action, update: no action ]
+}
+
+Ref historico_usuario {
+	personagem_maestria_historico.id_usuario_concedente > usuario.id_usuario [ delete: no action, update: no action ]
 Ref historico_personagem_maestria {
 	maestria_fragmento_historico.id_personagem_maestria > personagem_maestria.id_personagem_maestria [ delete: no action, update: no action ]
 }
